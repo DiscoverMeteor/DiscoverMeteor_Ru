@@ -7,3 +7,5 @@ Throughout the book, please use "Meteor", не MeteorJS и не метеор и 
 | packages  | модули  |
 | Meteor app  | Meteor приложение  |
 
+
+Такие понятия как push, commit, "template helper", "template managers", Handlebars, etc оставитьна английском.
