@@ -1,19 +1,19 @@
 ---
-title: Creating Posts
+title: Создание постов
 slug: creating-posts
 date: 0007/01/01
 number: 7
-contents: Learn how to submit a post client-side.|Implement a simple security check.|Restrict access to the post submit form.|Learn to use a server-side Method for added security.
+contents: Узнайте как создать новый пост на клиенте.|Создаем простую проверку данных.|Ограничиваем доступ к форме создания поста.|Научитесь использовать методы проверки данных на сервере для лучшей безопасности.
 paragraphs: 60
 ---
 
-////
+Мы уже знаем как создавать новые посты через консоль командой `Posts.insert`. Но было бы жестоко заставлять наших пользователей открывать консоль и печатать команды обращения к базе данных.
 
-////
+Нам нужно создать дружелюбный пользовательский интерфейс для новых постов.
 
-### Building The New Post Page
+### Создаем страницу новых постов
 
-////
+Для начала создадим путь к нашей новой странице:
 
 ~~~js
 Router.configure({
@@ -24,12 +24,12 @@ Router.configure({
 
 Router.map(function() {
   this.route('postsList', {path: '/'});
-  
+
   this.route('postPage', {
     path: '/posts/:_id',
     data: function() { return Posts.findOne(this.params._id); }
   });
-  
+
   this.route('postSubmit', {
     path: '/submit'
   });
@@ -38,11 +38,11 @@ Router.map(function() {
 <%= caption "lib/router.js" %>
 <%= highlight "13~15" %>
 
-////
+Чтобы передать контекст данных внутрь шаблона `postPage` мы пользуемся функцией `data` нашего роутера. Все что попадает в контекст `data` будет доступно по `this` внутри шаблона.
 
-### Adding A Link To The Header
+### Добавляем линк в заголовок
 
-////
+Теперь когда у нас есть адрес новой страницы, создадим на нее линк:
 
 ~~~html
 <template name="header">
@@ -69,7 +69,7 @@ Router.map(function() {
 <%= caption "client/views/includes/header.html" %>
 <%= highlight "11~16" %>
 
-////
+Создание адреса означает что если пользователь решит открыть `/submit` в браузере, Meteor отрендерит шаблон `postSubmit`. Давайте создадим этот шаблон:
 
 ~~~html
 <template name="postSubmit">
@@ -93,7 +93,7 @@ Router.map(function() {
         <div class="controls">
             <textarea name="message" type="text" value=""/>
         </div>
-    </div> 
+    </div>
 
     <div class="control-group">
         <div class="controls">
@@ -106,27 +106,27 @@ Router.map(function() {
 ~~~
 <%= caption "client/views/posts/post_submit.html" %>
 
-////
+Внимание - куча новой разметки. Но вся она родом из Twitter Bootstrap. Да, нам нужна только форма нового поста, но дополнительные теги и классы должны сделать все гораздо симпатичнее. Теперь наша новая страница должна выглядеть примерно так:
 
 <%= screenshot "7-1", "The post submit form" %>
 
-////
+Нам не нужно волноваться насчет параметра `action` для этой формы, так как мы перехватим событие и отправим данные с помощью JavaScript. Также не стоит волноваться насчет варианта когда JavaScript отключен в браузере - ведь тогда приложение Meteor просто не будет работать.
 
-### Creating Posts
+### Создание постов
 
-////
+Давайте создадим обработчик событий для кнопки `Submit`. Проще всего использовать событие `submit` (чем, например, ловить событие `click` на кнопке), ведь тогда мы охватим все возможные сценарии событий, включая нажатие кнопки `Enter` в поле с URL.
 
 ~~~js
 Template.postSubmit.events({
   'submit form': function(e) {
     e.preventDefault();
-    
+
     var post = {
       url: $(e.target).find('[name=url]').val(),
       title: $(e.target).find('[name=title]').val(),
       message: $(e.target).find('[name=message]').val()
     }
-    
+
     post._id = Posts.insert(post);
     Router.go('postPage', post);
   }
@@ -134,15 +134,15 @@ Template.postSubmit.events({
 ~~~
 <%= caption "client/views/posts/post_submit.js" %>
 
-<%= commit "7-1", "Added a submit post page and linked to it in the header." %>
+<%= commit "7-1", "Добавлена страница с новым постом, и линк на нее в заголовке страницы" %>
 
-////
+Эта функция использует [jQuery](http://jquery.com) чтобы собрать данные со всех полей формы и создать объект нового поста. Мы также добавили вызов `preventDefault` для события `event`, чтобы браузер не попытался отправить форму традиционным способом.
 
-////
+Наконец мы можем перенаправить пользователя на страницу с новым постом. Вызов функции `insert()` у коллекции вернет свежий `id` объекта, который только что был добавлен в базу данных. Этот параметр мы добавим в вызов `Router.go()` - он будет добавлен в адресную строку.
 
-////
+Теперь пользователь может отправить новый пост кнопкой `Submit` - пост будет создан, и пользователен перенаправлен на страницу с постом и комментариями.
 
-### Adding Some Security
+### Добавим немного безопасности
 
 ////
 
@@ -207,12 +207,12 @@ Router.configure({
 
 Router.map(function() {
   this.route('postsList', {path: '/'});
-  
+
   this.route('postPage', {
     path: '/posts/:_id',
     data: function() { return Posts.findOne(this.params._id); }
   });
-  
+
   this.route('postSubmit', {
     path: '/submit'
   });
@@ -258,12 +258,12 @@ Router.before(requireLogin, {only: 'postSubmit'});
 ~~~js
 Router.map(function() {
   this.route('postsList', {path: '/'});
-  
+
   this.route('postPage', {
     path: '/posts/:_id',
     data: function() { return Posts.findOne(this.params._id); }
   });
-  
+
   this.route('postSubmit', {
     path: '/submit'
   });
@@ -275,7 +275,7 @@ var requireLogin = function() {
       this.render(this.loadingTemplate);
     else
       this.render('accessDenied');
-    
+
     this.stop();
   }
 }
@@ -326,17 +326,17 @@ Router.before(requireLogin, {only: 'postSubmit'});
 Template.postSubmit.events({
   'submit form': function(e) {
     e.preventDefault();
-    
+
     var post = {
       url: $(e.target).find('[name=url]').val(),
       title: $(e.target).find('[name=title]').val(),
       message: $(e.target).find('[name=message]').val()
     }
-    
+
     Meteor.call('post', post, function(error, id) {
       if (error)
         return alert(error.reason);
-        
+
       Router.go('postPage', {_id: id});
     });
   }
@@ -355,31 +355,31 @@ Meteor.methods({
   post: function(postAttributes) {
     var user = Meteor.user(),
       postWithSameLink = Posts.findOne({url: postAttributes.url});
-    
+
     // ensure the user is logged in
     if (!user)
       throw new Meteor.Error(401, "You need to login to post new stories");
-    
+
     // ensure the post has a title
     if (!postAttributes.title)
       throw new Meteor.Error(422, 'Please fill in a headline');
-    
+
     // check that there are no previous posts with the same link
     if (postAttributes.url && postWithSameLink) {
-      throw new Meteor.Error(302, 
-        'This link has already been posted', 
+      throw new Meteor.Error(302,
+        'This link has already been posted',
         postWithSameLink._id);
     }
-    
+
     // pick out the whitelisted keys
     var post = _.extend(_.pick(postAttributes, 'url', 'title', 'message'), {
-      userId: user._id, 
-      author: user.username, 
+      userId: user._id,
+      author: user.username,
       submitted: new Date().getTime()
     });
-    
+
     var postId = Posts.insert(post);
-    
+
     return postId;
   }
 });
