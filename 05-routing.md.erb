@@ -51,19 +51,19 @@ This command downloads and installs the iron-router package into our app, ready 
 
 <% end %>
 
-### Routing: Mapping URLs To Templates
+### Маршрутизация: Сопоставление URL-ов С Шаблонами
 
-So far, we've built our layout using hard-coded template includes (such as `{{>postsList}}`).  So although the content of our app can change, the page's basic structure is always the same: a header, with a list of posts below it.
+До сих пор мы делали сборку нашего макета используя жёстко заданные вставки шаблонов (такие как `{{>postsList}}`). Таким образом, хотя контент нашего приложения может меняться, основная структура страницы всегда одинакова: заголовок со списком постов ниже.
 
-The Iron Router lets us break out of this mold by taking over what renders inside the HTML `<body>` tag. So we won't define that tag's content ourselves, as we would with a regular HTML page. Instead, we will point the router to a special layout template that contains a `{{yield}}` template helper. 
+Iron Router позволяет нам убежать от этой замшелости взятием на себя рендеринга внутри хтмл-тега `<body>`. Поэтому мы не будем определять содержимое этого тега сами, как мы делали этого с обычной ХТМЛ-страницей. Взамен, мы укажем маршрут к специальному макету, который содержит метод шаблона `{{yield}}`.
 
-This `{{yield}}` helper will define a special dynamic zone that will automatically render whichever template corresponds to the current route (as a convention, we'll designate this special template as the “route templates” from now on):
+Этот `{{yield}}` метод определит специальную динамиеческую зону, которая автоматически будет «рендерить» шаблон соответствующий текущему маршруту (договоримся, с этого места такие специальные шаблоны мы будем называть «маршрутными шаблонами» (“route templates”)):
 
 <%= diagram "router-diagram", "Layouts and templates.", "pull-center" %>
 
-We'll start by creating our layout and adding the `{{yield}}` helper. First, we'll remove our HTML `<body>` tag from `main.html`, and move its contents to their own template, `layout.html`.
+Мы начнем с создания нашего макета и добавлением метода `{{yield}}`. В начале мы удалим наш хтмл-тег `<body>` из `main.html` и переместим его контент в свой шаблон `layout.html`.
 
-So our slimmed down `main.html` now looks like this:
+Итак наш похудевший `main.html` теперь выглядит так:
 
 ~~~html
 <head>
@@ -72,7 +72,7 @@ So our slimmed down `main.html` now looks like this:
 ~~~
 <%= caption "client/main.html" %>
 
-While the newly created `layout.html` will now contain the app's outer layout:
+В то время новосозданный `layout.html` теперь будет содержать внешний макет приложения:
 
 ~~~html
 <template name="layout">
@@ -90,9 +90,9 @@ While the newly created `layout.html` will now contain the app's outer layout:
 ~~~
 <%= caption "client/views/application/layout.html" %>
 
-You'll notice we've replaced the inclusion of the `postsList` template with a call to `yield` helper. You'll notice that after this change, we see nothing on the screen. This is because we haven't told the router what to do with the `/` URL yet, so it simply serves up an empty template.
+Как вы можете заметить мы заменили включение шаблона `postsList` вызовом метода `yield`. Вы заметите, что после этого изменения мы ничего не увидим на экране. Это потому, что мы еще не сказали маршрутизатору что делать с URL-ом `/`, поэтому он просто выдаёт пустой шаблон.
 
-To begin, we can regain our old behavior by mapping the root `/` URL to the `postsList` template. We'll create a `/lib` directory at our project's root, and inside it create `router.js` :
+Для начала мы можем вернуть наше старое поведение сделав соответствие корневого УРЛ-а `/` к шаблону `postsList`. Мы создадим каталог `/lib` в корне нашего проекта, а внутри создадим `router.js`:
 
 ~~~js
 Router.configure({
@@ -105,7 +105,7 @@ Router.map(function() {
 ~~~
 <%= caption "lib/router.js"%>
 
-We've done two important things. First, we've told the router to use the layout we just created as the default layout for all routes. Second, we've defined a new route called `postsList` and mapped it to the `/` path. 
+Мы сделали две вашные вещи. Во-первых, мы сказали маршрутизатору использовать макет, который мы просто создали как макет по-умолчанию для всех маршутов. Во-вторых,  мы определили новый маршрут называемый `postsList` и отображенный на путь `/`.
 
 <% note do %>
 
