@@ -109,23 +109,23 @@ Router.map(function() {
 
 <% note do %>
 
-### The `/lib` folder
+### Папка `/lib`
 
-Anything you put inside the `/lib` folder is guaranteed to load first before anything else in your app (with the possible exception of smart packages). This makes it a great place to put any helper code that needs to be available at all times. 
+Что угодно положенное в папку `/lib` гарантированно загрузится первым, прежде чем всё остальное в вашем приложении (за возможным исключением умных пакетов). Это делает эту папку отличным место для любого вспомогательного кода, который нужен доступным всё время.
 
-A bit of warning though: note that since the `/lib` folder is neither inside `/client` or `/server`, this means its contents will be available to both environments.
+Небольшое предупреждение: заметим что поскольку папки `/lib` нет внутри папок `/client` или `/server` это означать что её контент будет доступен для обоих окружений.
 
 <% end %>
 
-### Named Routes
+### Именованные Маршруты
 
-Let's clear up a bit of ambiguity here. We named our route `postsList`, but we also have a *template* called `postsList`. So what's going on here?
+Проясним здесь некоторые моменты. Мы назвали наш маршрут `postsList`, но мы также назвали *шаблон* -- `postsList`. И что же здесь происходит?
 
-By default, Iron Router will look for a template with the same name as the route. In fact, it will even look for a *path* based on the route name, meaning that if we hadn't defined a custom path (which we did by providing a `path` option in our route definition), our template would've been accessible at URL `/postsList` by default. 
+По умолчанию Iron Router ищет шаблон с таким же именем как и маршрут. По факту он будет даже искать *путь (path)* основанный на имени маршрута, это означает, что мы не определив свой путь (который мы указываем опцией `path` в нашем описании маршрута), сделали наш шаблон по умолчанию доступным по URL `/postsList`.
 
-You may be wondering why we even need to name our routes in the first place. Naming routes lets us use a few Iron Router features that make it easier to build links inside our app. The most useful one is the `{{pathFor}}` Handlebars helper,  which returns the URL path component of any route.
+Вам может быть интересно, почему нам в первую очередь даже нужно именовать наши маршруты. Именованные маршруты позволят нам использовать несколько особенностей Iron Router чтобы облегчить создание ссылок внутри приложения. Один из самых полезных методов в Handlebars - это `{{pathFor}}`, который возвращает компонент URL путь любого маршрута.
 
-We want our main home link to point us back to the posts list, so instead of specifying a static `/` URL, we can also use the Handlebars helper. The end result will be the same, but this gives us more flexibility since the helper will always output the right URL even if we change the route's path in the router. 
+Мы хотим, чтобы наша ссылка на главную страницу указывала на список постов, вместо того чтобы определить статический URL `/` мы можем также использовать метод в Handlebars. Конечный результат будет такой же, но это даст нам больше гибкости так как этот метод будет всегда выводить правильный URL даже если мы изменим путь маршрута в маршрутизаторе.
 
 ~~~html
 <header class="navbar">
