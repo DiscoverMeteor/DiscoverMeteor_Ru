@@ -141,13 +141,13 @@ Router.map(function() {
 
 <%= commit "5-1", "Very basic routing." %>
 
-### Waiting on Data
+### В Ожидании Данных
 
-If you deploy the current version of the app (or launch the instance using the link above), you'll notice that the list appears empty for a few moments before the posts appear. This is because when the page first loads, there are no posts to display until the `posts` subscription is done grabbing the post data from the server.
+Если вы проведете развертывание текущей версии приложения (или запустите экземпляр используя ссылку выше), вы заметите что перед списком постов некоторое время отображается пустой список. Это потому что вначале загрузки страницы нет постов для отображения до тех пор пока подписчик `posts` не закончит забирать данные с сервера.
 
-It would be a much better user experience to provide some visual feedback that something is happening, and that the user should wait a moment.
+Было бы намного лучше для взаимодействия с пользователем обеспечить визуальную обратную связь чего-то происходящего и что нужно дождаться момента.
 
-Luckily, Iron Router gives us an easy way to do that -- we'll `waitOn` the subscription:
+К счастью, Iron Router даёт нам простой способ сделать это -- мы воспользуемся подписчиком `waitOn`:
 
 ~~~js
 Router.configure({
@@ -163,17 +163,17 @@ Router.map(function() {
 <%= caption "lib/router.js" %>
 <%= highlight "3,4" %>
 
-Let's break things down. First, we've modified the `Router.configure()` block to provide the router with the name of a loading template (which we'll create soon) to redirect to while our app is waiting for data. 
+Разберемся с этим кодом. Во-первых, мы изменили блок `Router.configure()` обеспечив маршрутизатор именем загрузочного шаблона (который мы скоро создадим) для перенаправления на него пока наше приложение ожидает данные.
 
-Second, we've also added a `waitOn` function, which returns our `posts` subscription. What this means is that the router will ensure that the `posts` subscription is loaded before sending the user through to the route they requested.
+Во-вторых, мы также добавили функцию `waitOn`, которая возвращает нашу `posts` подписку. Что это значит, что маршрутизатор будет гарантировать что подписка `posts` будет загружена перед отправкой пользователя по маршуруту который он запросил.
 
-Note that since we're defining our `waitOn` function globally at the router level, this sequence will only happen once when a user first accesses your app. After that, the data will already be loaded in the browser's memory and the router won't need to wait for it again. 
+Заметим, что поскольку мы определяем нашу функцию `waitOn` глобально на уровне маршрутизации, она сработает тогда когда пользователь впервые зайдёт в ваше приложение. После этого данные уже будут загружены в память браузера и маршрутизатору не нужно будет ждать их снова.
 
-And since we are now letting the router handle our subscription, you can now safely remove it from `main.js` (which should now be empty). 
+А так как мы сейчас позволили маршрутизатору обрабатывать нашу подписку, вы теперь можете безопасно удалить её из `main.js` (который теперь будет пустым).
 
-It's usually a good idea to wait on your subscriptions, not just for the user experience, but also because it means you can safely assume that data will always be available from within a template. This eliminates the need to deal with templates being rendered before their underlying data is available, which often requires tricky workarounds. 
+Это как правило хорошая идея ожидать ваши подписки, не просто только для взаимодействия с пользователем, но и также потому что это означает что вы можете с уверенностью предположить что данные всегда будут доступны в шаблоне. Это устраняет необходимость иметь дело с шаблонами начинающие рендеринг перед тем как их базовые данные будут доступны, которые часто требуют хитрые обходные пути.
 
-The final piece of the puzzle is the actual loading template. We'll use the `spin` package to create a nice animated loading spinner. Add it with `mrt add spin`, and then create the `loading` template as follows:
+Финальный кусочек головоломки это актуальный шаблон процесса загрузки. Для создания прекрасного анимированного индикатора загрузки мы воспользуемся пакетом `spin`. Добавим его с `mrt add spin`, и потом создадим шаблон `loading` как далее:
 
 ~~~html
 <template name="loading">
@@ -182,19 +182,19 @@ The final piece of the puzzle is the actual loading template. We'll use the `spi
 ~~~
 <%= caption "client/views/includes/loading.html" %>
 
-Note that `{{>spinner}}` is a partial contained in the `spin` package. Even though this partial comes from “outside” our app, we can include it just like any other template. 
+Заметьте что `{{>spinner}}` частично содержится в `spin` пакете. Даже если эта часть приходит “извне” нашего приложения, мы можем вставлять его также как и любой другой шаблон.
 
 <%= commit "5-2", "Wait on the post subscription." %>
 
 <% note do %>
 
-### A First Glance At Reactivity
+### Первый Взгляд на Реактивность
 
-Reactivity is a core part of Meteor, and although we've yet to really touch on it, our loading template gives us a first glance at this concept. 
+Реактивность это базовая часть Meteor, и хотя мы еще по настоящему не касались её, наш шаблон загрузки даёт первый взгляд на эту концепцию.
 
-Redirecting to a loading template if data isn't loaded yet is all well and good, but how does the router know when to redirect the user *back* to the right page once the data comes through?
+Перенаправление на шаблон загрузки если данные еще не загружены это конечно же хорошо, но как маршрутизатор узнал, что как только данные поступят тогда перенаправить пользователя *обратно* на правильную страницу?
 
-For now, let's just say that this is exactly where reactivity comes in, and leave it at this. But don't worry, you'll learn more about it very soon!
+На данный момент, скажем просто, что это однозначно работает реактивность. Но не беспокойтесь, вы скоро изучите её.
 
 <% end %>
 
