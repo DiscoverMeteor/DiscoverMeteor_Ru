@@ -1,27 +1,27 @@
 ---
-title: Routing
+title: Маршрутизация
 slug: routing
 date: 0005/01/01
 number: 5
 points: 10
 photoUrl: http://www.flickr.com/photos/ikewinski/9517814403/
 photoAuthor: Mike Lewinski
-contents: Learn about routing in Meteor.|Create post discussion pages, with unique URLs.|Learn how to link to those URLs properly.
+contents: Изучите маршрутизацию в Meteor.|Создадите страницы обсуждения постов с уникальными URL-ми.|Изучите как соединять с такими URL-ми правильно.
 ---
 
-Now that we have a list of posts (which will eventually be user-submitted), we need an individual post page where our users will be able to discuss each post.
+Теперь мы имеем список постов (которые в конце концов отправят пользователи), нам нужна отдельная страница для каждого поста, где наши пользователи смогут обсудить его.
 
-We'd like these pages to be accessible via a *permalink*, a URL of the form `http://myapp.com/posts/xyz` (where `xyz` is a MongoDB `_id` identifier) that is unique to each post. 
+Мы бы хотели, чтобы эти страницы были доступны через *постоянную ссылку* (*permalink*) -- URL вида `http://myapp.com/posts/xyz` (где `xyz` - идентификатор `_id` в MongoDB), которая уникальна для каждого поста.
 
-This means we'll need some kind of *routing* to look at what's inside the browser's URL bar and display the right content accordingly.
+Это значит нам понадобится какая-нибудь *маршрутизация (routing)*, чтобы адресная строка в браузере правильно соответствовала отображаемому контенту.
 
-### Adding the Iron Router Package
+### Добавление пакета Iron Router
 
-[Iron Router](https://github.com/EventedMind/iron-router) is a routing package that was conceived specifically for Meteor apps. 
+[Iron Router](https://github.com/EventedMind/iron-router) - это пакет маршрутизации, который был задуман специально для Meteor приложений.
 
-Not only does it help with routing (setting up paths), but it can also take care of filters (assigning actions to some of these paths) and even manage subscriptions (control which path has access to what data). (Note: Iron Router was developed in part by *Discover Meteor* co-author Tom Coleman.)
+Он помогает не только в маршрутизации (настройке путей), но он может также позаботиться о фильтрации (сопоставление действий к некоторым путям) и даже управлять подписками (контроль, какой путь имеет доступ к этим данным). (Примечание: Iron Router частично был разработан Tom Coleman соавтором книги *Discover Meteor*.)
 
-First, let's install the package from Atmosphere: 
+Во-первых, установим пакет из Atmosphere:
 
 ~~~bash
 $ mrt add iron-router
@@ -30,24 +30,24 @@ $ mrt add iron-router
 
 This command downloads and installs the iron-router package into our app, ready to use. Note that you might sometimes need to restart your Meteor app (with `ctrl+c` to kill the process, then `mrt` to start it again) before a package can be used.
 
-Note that the Iron Router is a third-party package, meaning that you'll need Meteorite to install it (`meteor add iron-router` won't work).
+Обратите внимание, что Iron Router это сторонний пакет, поэтому вам понадобится Meteorite для его установки (`meteor add iron-router` не будет работать).
 
 <% note do %>
 
-### Router Vocabulary
+### Термины Маршрутизации
 
-We'll be touching on a lot of different features of the router in this chapter. If you have some experience with a framework such as Rails, you'll already be familiar with most of these concepts. But if not, here's a quick glossary to bring you up to speed:
+В этой главе мы коснёмся большинства различных особенностей маршрутизации. Если вы имеете некоторый опыт с фреймворками такими как Rails, вам будут уже знакомы большинство из этих концепций. Но если это не так, здесь приводится краткий глоссарий для быстрого ознакомления:
 
-- **Routes**: A route is the basic building block of routing. It's basically the set of instructions that tell the app where to go and what to do when it encounters a URL. 
-- **Paths**: A path is a URL within your app. It can be static (`/terms_of_service`) or dynamic (`/posts/xyz`), and even include query parameters (`/search?keyword=meteor`).
-- **Segments**: The different parts of a path, delimited by forward slashes (`/`).
-- **Hooks**: Hooks are actions that you'd like to perform before, after, or even during the routing process. A typical example would be checking if the user has the proper rights before displaying a page. 
-- **Filters**: Filters are simply hooks that you define globally for one or more routes. 
-- **Route Templates**: Each route needs to point to a template. If you don't specify one, the router will look for a template with the same name as the route by default.
-- **Layouts**: You can think of layouts as one of those digital photo frames. They contain all the HTML code that wraps the current template, and will remain the same even if the template changes.
-- **Controllers**: Sometimes, you'll realize that a lot of your templates are reusing the same parameters. Rather than duplicate your code, you can let all these routes inherit from a single *routing controller* which will contain all the routing logic. 
+- **Маршруты (Routes)**: Маршрут это основной строительный блок маршрутизации. Это в основном набор инструкций, которые говорят куда идти и что делать при встрече с данным URL-ом.
+- **Пути (Paths)**: Путь это URL внутри вашего приложения. Он может быть статичным (`/terms_of_service`) или динамичным (`/posts/xyz`), и даже включать параметры запроса (`/search?keyword=meteor`).
+- **Сегменты (Segments)**: Различные части пути, разделенные прямым слэшем (`/`).
+- **Обработчики (Hooks)**: Обработчики это действия, которые вы захотите произвести перед, после, или даже во время процесса маршрутизации. Типичным примером может быть проверка прав пользователя перед отображением страницы.
+- **Фильтры (Filters)**: Фильтрами являются простые обработчики, которые вы глобально определяете для одного или нескольких маршрутов.
+- **Шаблоны маршрутов (Route Templates)**: Каждому маршруту нужно указать шаблон. Если вы его не укажете маршрутизатор будет искать шаблон с таким же именем как у маршрута по умолчанию.
+- **Макеты (Layouts)**: Вы можете думать о макетах, как о цифровых фоторамках. Они содержат в себе весь ХТМЛ-код, который оборачивается текущим шаблоном, и будут оставаться ими же, даже если шаблон изменится.
+- **Контроллеры (Controllers)**: Иногда, вы будете понимать, что многие ваши шаблоны переиспользуют одни и те же параметры. Взамен дублирования кода, вы можете все эти маршруты наследовать от одного *маршрутного контроллера (routing controller)*, который будет содержать всю логику маршрутизации.
 
-For more information about Iron Router, check out [the full documentation on GitHub](https://github.com/EventedMind/iron-router). 
+Для более подробной информации об Iron Router, проверьте [полную документацию на GitHub](https://github.com/EventedMind/iron-router).
 
 <% end %>
 
