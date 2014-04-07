@@ -1,16 +1,16 @@
 ---
-title: Comments
+title: Комментарии
 slug: comments
 complete: 100
 date: 0010/01/01
 number: 10
-contents: Display existing comments.|Add a comment posting form.|Learn how to load only the current post's comments.|Add a comment count property to posts.
+contents: Показываем комментарии.|Добавляем форму для нового комментария.|Узнаем как загрузить только комментарии текущего поста.|Добавляем параметр с количеством комментариев к посту.
 paragraphs: 34
 ---
 
-////
+Целью каждого социального сайта является создание сообщества пользователей. Это было бы невозможно, если у людей не было бы способа общаться друг с другом. В этой главе мы добавим в наше приложение возможность оставлять комментарии к постам.
 
-////
+Для начала создадим новую коллекцию для хранения комментариев. Также сразу добавим в нее тестовые комментарии (`fixtures`).
 
 ~~~js
 Comments = new Meteor.Collection('comments');
@@ -18,10 +18,10 @@ Comments = new Meteor.Collection('comments');
 <%= caption "collections/comments.js" %>
 
 ~~~js
-// Fixture data 
+// Fixture data
 if (Posts.find().count() === 0) {
   var now = new Date().getTime();
-  
+
   // create two users
   var tomId = Meteor.users.insert({
     profile: { name: 'Tom Coleman' }
@@ -31,7 +31,7 @@ if (Posts.find().count() === 0) {
     profile: { name: 'Sacha Greif' }
   });
   var sacha = Meteor.users.findOne(sachaId);
-  
+
   var telescopeId = Posts.insert({
     title: 'Introducing Telescope',
     userId: sacha._id,
@@ -39,7 +39,7 @@ if (Posts.find().count() === 0) {
     url: 'http://sachagreif.com/introducing-telescope/',
     submitted: now - 7 * 3600 * 1000
   });
-  
+
   Comments.insert({
     postId: telescopeId,
     userId: tom._id,
@@ -47,7 +47,7 @@ if (Posts.find().count() === 0) {
     submitted: now - 5 * 3600 * 1000,
     body: 'Interesting project Sacha, can I get involved?'
   });
-  
+
   Comments.insert({
     postId: telescopeId,
     userId: sacha._id,
@@ -55,7 +55,7 @@ if (Posts.find().count() === 0) {
     submitted: now - 3 * 3600 * 1000,
     body: 'You sure can Tom!'
   });
-  
+
   Posts.insert({
     title: 'Meteor',
     userId: tom._id,
@@ -63,7 +63,7 @@ if (Posts.find().count() === 0) {
     url: 'http://meteor.com',
     submitted: now - 10 * 3600 * 1000
   });
-  
+
   Posts.insert({
     title: 'The Meteor Book',
     userId: tom._id,
@@ -75,7 +75,7 @@ if (Posts.find().count() === 0) {
 ~~~
 <%= caption "server/fixtures.js" %>
 
-////
+Добавим механизм публикации и подписки на нашу коллекцию:
 
 ~~~js
 Meteor.publish('posts', function() {
@@ -93,7 +93,7 @@ Meteor.publish('comments', function() {
 Router.configure({
   layoutTemplate: 'layout',
   loadingTemplate: 'loading',
-  waitOn: function() { 
+  waitOn: function() {
     return [Meteor.subscribe('posts'), Meteor.subscribe('comments')];
   }
 });
@@ -101,17 +101,17 @@ Router.configure({
 <%= caption "lib/router.js" %>
 <%= highlight "4~6" %>
 
-<%= commit "10-1", "Added comments collection, pub/sub and fixtures." %>
+<%= commit "10-1", "Добавлена коллекция комментариев, публикация и подписка на коллекцию, а также тестовые комментарии." %>
 
-////
+Обратите внимание - чтобы тестовые комментарии оказались в базе данных вам нужно вызвать команду `meteor reset`. Эта команда сбросит все записи в Mongo и перезапишет в нее все тестовые данные (`fixtures`). Учетные записи пользователей также будут стерты, так что придется зарегистрироваться заново.
 
-////
+При создании тестовых записей произошли следующие вещи. Сначала мы создали двух тестовых пользователей - `Tom Coleman` и `Sacha Greif`. Затем мы использовали параметр `id` чтобы найти их в базе данных. От имени каждого пользователя был создан комментарий под первым постом, в комментарии был добавлен `id` поста (объект комментария содержит параметр `postId`) и `id` автора (параметр `userId`). Мы также добавили дату создания комментария, текст самого комментария и *денормализованное* поле `author`.
 
-////
+Также мы подсказали нашему маршрутизатору ожидать загрузки постов и комментариев.
 
-### Displaying comments
+### Показываем комментарии
 
-////
+Наши комментарии уже добавляются и читаются из базы данных. Настало время показать их в приложении. К счастью, этот процесс должен быть уже знаком, и вы скорее всего уже представляете следующие шаги:
 
 ~~~html
 <template name="postPage">
@@ -137,9 +137,9 @@ Template.postPage.helpers({
 <%= caption "client/views/posts/post_page.js" %>
 <%= highlight "2~4" %>
 
-////
+Мы добавили блок `{{#each comments}}` в шаблон поста, так чтобы `this` указывал на пост в хелпере `comments`. Чтобы найти соответствующие посту комментарии, мы проверяем их по атрибуту текущего поста `postId`.
 
-////
+Учитывая все, что мы узнали о хелперах и шаблонах `handlebars`, отрисовывание комментария происходит привычным способом. Добавим новую папку `comments` внутри папки `views` для всех шаблонов, связанных с комментариями:
 
 ~~~html
 <template name="comment">
@@ -154,7 +154,7 @@ Template.postPage.helpers({
 ~~~
 <%= caption "client/views/comments/comment.html" %>
 
-////
+Создадим небольшой шаблон-помощник для форматирования даты создания комментария в читаемый вид (если, конечно, вы не из тех редких людей кто чувствует себя комфортно с форматами дат UNIX и шестнадцатиричными кодами цветов).
 
 ~~~js
 Template.comment.helpers({
@@ -165,7 +165,7 @@ Template.comment.helpers({
 ~~~
 <%= caption "client/views/comments/comment.js" %>
 
-////
+Затем мы покажем цифру с количеством комментариев для каждого поста:
 
 ~~~html
 <template name="postItem">
@@ -185,7 +185,7 @@ Template.comment.helpers({
 <%= caption "client/views/posts/post_item.html" %>
 <%= highlight "6,7" %>
 
-////
+И добавим хелпер `commentsCount` для нашего менеджера `postItem`:
 
 ~~~js
 Template.postItem.helpers({
@@ -205,28 +205,28 @@ Template.postItem.helpers({
 <%= caption "client/views/posts/post_item.js" %>
 <%= highlight "9,10,11" %>
 
-<%= commit "10-2", "Display comments on `postPage`." %>
+<%= commit "10-2", "Показываем комментарии на странице с постом" %>
 
-////
+Теперь наши тестовые комментарии должны появиться на странице.
 
-<%= screenshot "10-1", "Displaying comments" %>
+<%= screenshot "10-1", "Показываем комментарии" %>
 
-### Submitting Comments
+### Создание новых комментариев
 
-////
+Давайте дадим возможность пользователям отправлять новые комментарии. Процесс будет примерно таким же, как и когда мы добавляли возможность создания новых постов.
 
-////
+Для начала мы добавим форму нового комментария под каждым постом:
 
 ~~~html
 <template name="postPage">
   {{> postItem}}
-  
+
   <ul class="comments">
     {{#each comments}}
       {{> comment}}
     {{/each}}
   </ul>
-  
+
   {{#if currentUser}}
     {{> commentSubmit}}
   {{else}}
@@ -237,7 +237,7 @@ Template.postItem.helpers({
 <%= caption "client/views/posts/post_page.html" %>
 <%= highlight "11~15" %>
 
-////
+Затем мы создадим шаблон с формой нового комментария:
 
 ~~~html
 <template name="commentSubmit">
@@ -258,21 +258,21 @@ Template.postItem.helpers({
 ~~~
 <%= caption "client/views/comments/comment_submit.html" %>
 
-<%= screenshot "10-2", "The comment submit form" %>
+<%= screenshot "10-2", "Форма для создания нового комментария" %>
 
-////
+Для отправки комментариев мы вызовем Метод `comment` в менеджере `commentSubmit`, который работает почти также, как и менеджер `postSubmit`:
 
 ~~~js
 Template.commentSubmit.events({
   'submit form': function(e, template) {
     e.preventDefault();
-    
+
     var $body = $(e.target).find('[name=body]');
     var comment = {
       body: $body.val(),
       postId: template.data._id
     };
-    
+
     Meteor.call('comment', comment, function(error, commentId) {
       if (error){
         throwError(error.reason);
@@ -285,7 +285,7 @@ Template.commentSubmit.events({
 ~~~
 <%= caption "client/views/comments/comment_submit.js" %>
 
-////
+Точно так же, как ранее мы создали Метод Meteor `post` на сервере, мы создадим еще один Метод под названием `comment` для создания новых комментариев, проверки комментариев на соответствие заданным нами правилам, и наконец сохранения комментариев в коллекцию базы данных.
 
 ~~~js
 Comments = new Meteor.Collection('comments');
@@ -297,19 +297,19 @@ Meteor.methods({
     // ensure the user is logged in
     if (!user)
       throw new Meteor.Error(401, "You need to login to make comments");
-      
+
     if (!commentAttributes.body)
       throw new Meteor.Error(422, 'Please write some content');
-      
+
     if (!post)
       throw new Meteor.Error(422, 'You must comment on a post');
-    
+
     comment = _.extend(_.pick(commentAttributes, 'postId', 'body'), {
       userId: user._id,
       author: user.username,
       submitted: new Date().getTime()
     });
-    
+
     return Comments.insert(comment);
   }
 });
@@ -317,23 +317,23 @@ Meteor.methods({
 <%= caption "collections/comments.js" %>
 <%= highlight "3~25" %>
 
-<%= commit "10-3", "Created a form to submit comments." %>
+<%= commit "10-3", "Форма для отправки комментариев готова." %>
 
-////
+Ничего особенного - мы просто проверяем что пользователь залогинен, что у комментария есть текст, и что он относится к конкретному посту.
 
-### Controlling the Comments Subscription
+### Управляем подпиской на комментарии
 
-////
+На настоящий момент мы публикуем все комментарии для всех постов на все подключенные клиенты. Наверное, это чересчур. В конце концов, на клиенте нам требуется только небольшая часть этих данных. Давайте улучшим наш механизм публикаций и подписки - мы будем контролировать, что именно отправляется клиентам.
 
-////
+Если подумать, нам нужна подписка на комментарии только когда пользователь открыл страницу конкретного поста - и даже тогда нам нужны комментарии только для этого поста.
 
-////
+Для начала мы изменим способ подписки на комментарии. До последнего момента мы подписывались на уровне *маршрутизатора*. Это означало что все данные загружались как только маршрутизатор был готов к работе.
 
-////
+Но теперь мы хотели бы, чтобы наша подписка зависела от параметра в адресе страницы - и этот параметр менялся бы в зависимости от страницы. Поэтому мы переместим код подписки с уровня *маршрутизатора* на уровень *маршрута*.
 
-////
+Теперь, вместо загрузки всех данных одновременно с загрузкой приложения мы будем загружать данные когда приложение будет запрашивать определенный адрес. Это негативно отразится на времени загрузки страниц во время работы приложения, но тут мало что можно сделать - если только загрузить все данные на клиент и хранить их там постоянно.
 
-////
+Так будет выглядеть новая функция `waitOn` на уровне маршрута:
 
 ~~~js
 Router.map(function() {
@@ -355,7 +355,7 @@ Router.map(function() {
 <%= caption "lib/router.js" %>
 <%= highlight "7~9" %>
 
-////
+Вы заметите что мы передаем `this.params._id` как аргумент для подписки. Используем этот параметр, чтобы ограничить публикуемые комментарии только теми, что относятся к данному посту:
 
 ~~~js
 Meteor.publish('posts', function() {
@@ -369,19 +369,19 @@ Meteor.publish('comments', function(postId) {
 <%= caption "server/publications.js" %>
 <%= highlight "5~7" %>
 
-<%= commit "10-4", "Made a simple publication/subscription for comments." %>
+<%= commit "10-4", "Создан простой механизм публикации и подписки для комментариев." %>
 
-////
+Осталась только одна загвоздка - если мы вернемся на стартовую страницу, у всех постов будет высвечено 0 комментариев.
 
-<%= screenshot "10-3", "Our comments are gone!" %>
+<%= screenshot "10-3", "У вас нет комментариев!" %>
 
-### Counting Comments
+### Считаем комментарии
 
-////
+Причина такого поведения проста - мы всегда загружаем комментарии только *одного* поста. Когда же мы вызываем `Comments.find({postId: this._id})` в хелпере `commentsCount` в менеджере `post_item`, Meteor не может найти необходимые данные на клиенте чтобы правильно посчитать количество комментариев.
 
-////
+Лучший решением будет *денормализовать* количество комментариев прямо в пост (если вы не уверены что это означает, не волнуйтесь - следующая вспомогательная глава все прояснит). Несмотря на то, что наш код стал немного сложнее, это отлично компенсируется скоростью работы приложения когда не нужно публиковать _все_ комментарии все время.
 
-////
+Добавим свойство `commentsCount` в структуру объекта `post`. Также, обновим структуру тестовых постов (и вызовем `meteor reset` чтобы их перезагрузить. Не забудьте заново зарегистрировать пользователя):
 
 ~~~js
 var telescopeId = Posts.insert({
@@ -404,13 +404,13 @@ Posts.insert({
 ~~~
 <%= caption "server/fixtures.js" %>
 
-////
+Затем мы удостоверимся, что у всех новых постов 0 комментариев:
 
 ~~~js
-// pick out the whitelisted keys
+// выбираем нужные поля
 var post = _.extend(_.pick(postAttributes, 'url', 'title', 'message'), {
-  userId: user._id, 
-  author: user.username, 
+  userId: user._id,
+  author: user.username,
   submitted: new Date().getTime(),
   commentsCount: 0
 });
@@ -419,7 +419,7 @@ var postId = Posts.insert(post);
 ~~~
 <%= caption "collections/posts.js" %>
 
-////
+Дальше мы просто обновляем значение свойства `commentsCount` когда создается новый комментарий. У Mongo как раз есть подходящий оператор `$inc` для инкрементного увеличения значения параметра:
 
 ~~~js
 // update the post with the number of comments
@@ -429,8 +429,8 @@ return Comments.insert(comment);
 ~~~
 <%= caption "collections/comments.js "%>
 
-////
+И еще теперь мы можем удалить хелпер `commentsCount` из `client/views/posts/post_item.js`, так как это поле теперь доступно прямо в объекте поста.
 
-<%= commit "10-5", "Denormalized the number of comments into the post." %>
+<%= commit "10-5", "Денормализуем количество комментариев в объект поста." %>
 
-////
+Наши пользователи теперь могут общаться друг с другом. Было бы обидно, если бы они пропустили новые комментарии. Следующая глава расскажет о том, как мы сможем уведомить пользователей о новых комментариях.
