@@ -1,30 +1,30 @@
 ---
-title: Pagination
+title: Разбиение на страницы
 slug: pagination
 date: 0012/01/01
 number: 12
-contents: Learn more about Meteor's subscriptions, and how we can use them to control data.|Implement infinite-style pagination.|Use the `iron-router-progress` package to implement a nifty iOS-style progress bar.|Create a special subscription to deal with direct links to posts page.
+contents: Узнаете больше о подписках Meteor, и как мы можем их использовать для контроля данных.|Создадите страницу с подгружаемыми данными по мере прокрутки.|Используете пакет `iron-router-progress` для создания индикатора в стиле iOS.|Создадите особенную подписку для прямых линков на страницу постов.
 paragraphs: 67
 ---
 
-////
+Наше приложение Microscope продвигается ударными темпами, и оно определенно станет хитом когда мы его запустим.
 
-////
+По этой причине стоит задуматься о быстродействии приложения, и о том как оно пострадает когда сотни и тысячи пользователей ринутся создавать новые посты.
 
-////
+Ранее мы говорили о том, как коллекция на клиенте должна хранить только часть данных, доступных на сервере. Мы даже создали такие коллекции для уведомлений и комментариев.
 
-////
+Не смотря на это мы все еще публикуем все наши посты за раз, для всех подключенных пользователей. Когда количество постов станет измеряться тысячами, это станет большой проблемой. Чтобы избежать ее, нам надо начать разбивать посты на отдельные страницы.
 
-### Adding More Posts
+### Добавляем больше постов
 
-////
+Для начала давайте создадим больше тестовых постов, чтобы было что разбивать на страницы.
 
 ~~~js
-// Fixture data 
+// Fixture data
 if (Posts.find().count() === 0) {
 
   //...
-  
+
   Posts.insert({
     title: 'The Meteor Book',
     userId: tom._id,
@@ -33,7 +33,7 @@ if (Posts.find().count() === 0) {
     submitted: now - 12 * 3600 * 1000,
     commentsCount: 0
   });
-  
+
   for (var i = 0; i < 10; i++) {
     Posts.insert({
       title: 'Test post #' + i,
@@ -49,31 +49,31 @@ if (Posts.find().count() === 0) {
 <%= caption "server/fixtures.js" %>
 <%= highlight "15~24" %>
 
-////
+После запуска команды `meteor reset` вы должны получить примерно такую картину:
 
 <%= screenshot "12-1", "Displaying dummy data. " %>
 
-<%= commit "12-1", "Added enough posts that pagination is necessary." %>
+<%= commit "12-1", "Добавили достаточно постов чтобы их можно было разбивать на страницы." %>
 
-### Infinite Pagination
+### Бесконечные страницы
 
-////
+В лучших традициях современных веб-приложений мы создадим механизм, который будет подгружать новые посты по мере прокрутки страницы вниз. Для начала мы загрузим, скажем, 10 постов, а внизу высветим ссылку "Загрузить еще". По щелчку на этой ссылке мы подгрузим еще 10 постов, и так *до бесконечности*. Таким образом мы сможем контролировать всю нашу систему разбиения данных на страницы с помощью одного единственного параметра, означающего количество постов, единовременно выводимых на экран.
 
-////
+Нам надо придумать способ сообщить об этом параметру серверу, чтобы тот знал, сколько постов засылать клиенту. У нас уже есть подписка на публикацию `posts` на маршрутизаторе. Мы воспользуемся ей, чтобы дать маршрутизатору возможность управлять нашими страницами.
 
-////
+Самый простой способ передать параметр на сервер будет через URL. Например, в таком формате - `http://localhost:3000/25` - здесь мы передаем значение `25`, про которое сервер догадается, что оно означает количество постов. Дополнительной фишкой будет то, что если пользователь случайно (или намеренно) перезагрузит страницу в браузере, он снова получит то же самое количество постов, что и ранее.
 
-////
+Для этого нам понадобится изменить способ подписки на посты. Точно так же, как и в главе *Комментарии*, мы переместим код подписки с уровня *маршрутизатора* на уровень *маршрута*.
 
-////
+Если вы уже запутались - не пугайтесь. Сейчас все станет яснее, когда мы начнем писать код.
 
-////
+Для начала мы уберем подписку на публикацию `posts` в блоке `Router.configure()`. Удалите `Meteor.subscribe('posts')`, и оставьте только подписку на уведомления - `notifications`:
 
 ~~~js
 Router.configure({
   layoutTemplate: 'layout',
   loadingTemplate: 'loading',
-  waitOn: function() { 
+  waitOn: function() {
     return [Meteor.subscribe('notifications')]
   }
 });
@@ -81,12 +81,12 @@ Router.configure({
 <%= caption "lib/router.js" %>
 <%= highlight "5" %>
 
-////
+Затем мы добавим параметр `postsLimit` в адрес маршрута. Символ `?` означает, что параметр необязательный. Таким образом наш маршрут будет совпадать не только с `http://localhost:3000/50`, но и с обычным `http://localhost:3000`.
 
 ~~~js
 Router.map(function() {
   //...
-  
+
   this.route('postsList', {
     path: '/:postsLimit?'
   });
@@ -104,11 +104,11 @@ Router.map(function() {
 ~~~js
 Router.map(function() {
   //..
-  
+
   this.route('postsList', {
     path: '/:postsLimit?',
     waitOn: function() {
-      var postsLimit = parseInt(this.params.postsLimit) || 5; 
+      var postsLimit = parseInt(this.params.postsLimit) || 5;
       return Meteor.subscribe('posts', {sort: {submitted: -1}, limit: postsLimit});
     }
   });
@@ -164,17 +164,17 @@ Router.map(function() {
   this.route('postsList', {
     path: '/:postsLimit?',
     waitOn: function() {
-      var limit = parseInt(this.params.postsLimit) || 5; 
+      var limit = parseInt(this.params.postsLimit) || 5;
       return Meteor.subscribe('posts', {sort: {submitted: -1}, limit: limit});
     },
     data: function() {
-      var limit = parseInt(this.params.postsLimit) || 5; 
+      var limit = parseInt(this.params.postsLimit) || 5;
       return {
         posts: Posts.find({}, {sort: {submitted: -1}, limit: limit})
       };
     }
   });
-  
+
   //..
 });
 ~~~
@@ -189,7 +189,7 @@ Router.map(function() {
 Router.configure({
   layoutTemplate: 'layout',
   loadingTemplate: 'loading',
-  waitOn: function() { 
+  waitOn: function() {
     return [Meteor.subscribe('notifications')]
   }
 });
@@ -200,11 +200,11 @@ Router.map(function() {
   this.route('postsList', {
     path: '/:postsLimit?',
     waitOn: function() {
-      var limit = parseInt(this.params.postsLimit) || 5; 
+      var limit = parseInt(this.params.postsLimit) || 5;
       return Meteor.subscribe('posts', {sort: {submitted: -1}, limit: limit});
     },
     data: function() {
-      var limit = parseInt(this.params.postsLimit) || 5; 
+      var limit = parseInt(this.params.postsLimit) || 5;
       return {
         posts: Posts.find({}, {sort: {submitted: -1}, limit: limit})
       };
@@ -254,9 +254,9 @@ Router.map(function() {
 ~~~js
 PostsListController = RouteController.extend({
   template: 'postsList',
-  increment: 5, 
-  limit: function() { 
-    return parseInt(this.params.postsLimit) || this.increment; 
+  increment: 5,
+  limit: function() {
+    return parseInt(this.params.postsLimit) || this.increment;
   },
   findOptions: function() {
     return {sort: {submitted: -1}, limit: this.limit()};
@@ -301,9 +301,9 @@ Router.map(function() {
 ~~~js
 PostsListController = RouteController.extend({
   template: 'postsList',
-  increment: 5, 
-  limit: function() { 
-    return parseInt(this.params.postsLimit) || this.increment; 
+  increment: 5,
+  limit: function() {
+    return parseInt(this.params.postsLimit) || this.increment;
   },
   findOptions: function() {
     return {sort: {submitted: -1}, limit: this.limit()};
@@ -353,7 +353,7 @@ PostsListController = RouteController.extend({
     {{#each posts}}
       {{> postItem}}
     {{/each}}
-    
+
     {{#if nextPath}}
       <a class="load-more" href="{{nextPath}}">Load more</a>
     {{/if}}
@@ -396,9 +396,9 @@ mrt add iron-router-progress
 
 ~~~js
 Router.map(function() {
- 
+
   //...
-  
+
   this.route('postSubmit', {
     path: '/submit',
     disableProgress: true
@@ -440,7 +440,7 @@ Meteor.publish('singlePost', function(id) {
 Router.map(function() {
 
   //...
-    
+
   this.route('postPage', {
     path: '/posts/:_id',
     waitOn: function() {
@@ -454,12 +454,12 @@ Router.map(function() {
 
   this.route('postEdit', {
     path: '/posts/:_id/edit',
-    waitOn: function() { 
+    waitOn: function() {
       return Meteor.subscribe('singlePost', this.params._id);
     },
-    data: function() { return Posts.findOne(this.params._id); }    
+    data: function() { return Posts.findOne(this.params._id); }
   });
-  
+
   /...
 
 });
