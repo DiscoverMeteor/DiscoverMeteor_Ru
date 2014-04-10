@@ -188,7 +188,7 @@ Router.map(function() {
 
 <% note do %>
 
-### Первый Взгляд на Реактивность
+### Первый Взгляд На Реактивность
 
 Реактивность это базовая часть Meteor, и хотя мы еще по настоящему не касались её, наш шаблон загрузки даёт первый взгляд на эту концепцию.
 
@@ -198,13 +198,13 @@ Router.map(function() {
 
 <% end %>
 
-### Маршрутизация к указанному посту
+### Маршрутизация К Указанному Посту
 
-Now that we've seen how to route to the `postsList` template, let's set up a route to display the details of a single post. 
+Теперь, когда мы увидели как указывать маршрут к шаблону `postsList`, давайте построим маршрут для отображения подробного вида одного поста.
 
-There's just one catch: we can't go ahead and define one route per post, since there might be hundreds of them. So we'll need to set up a single *dynamic* route, and make that route display any post we want. 
+Есть одна загвоздка: мы не можем просто взять и определять маршрут на каждый пост, так как их может быть сотни. Таким образом нам нужно построить единственный *динамический* маршрут, и сделать так чтобы он отображал любой пост, который мы захотим.
 
-To start with, we'll create a new template that simply renders the same post template that we used earlier in the list of posts.
+Для начала мы создадим новый шаблон, который просто «рендерит» такой же шаблон поста, что мы использовали ранее в списке постов.
 
 ~~~html
 <template name="postPage">
@@ -213,9 +213,9 @@ To start with, we'll create a new template that simply renders the same post tem
 ~~~
 <%= caption "client/views/posts/post_page.html" %>
 
-We'll add more elements to this template later on (such as comments), but for now it'll simply serve as a shell for our `{{> postItem}}` include. 
+Мы добавим больше элементов (таких как комментарии) к этому шаблону позже, но на данный момент он будет служить простой оболочкой для нашей вставки `{{> postItem}}`.
 
-We are going to create another named route, this time mapping URL paths of the form `/posts/<ID>` to the `postPage` template:
+Мы собираемся создать другой именованный маршрут, на этот раз отображение путей URL-а формы `/posts/<ID>` к шаблону `postPage`:
 
 ~~~js
 Router.map(function() {
@@ -230,17 +230,17 @@ Router.map(function() {
 <%= caption "lib/router.js" %>
 <%= highlight "4~6" %>
 
-The special `:_id` syntax tells the router two things: first, to match any route of the form `/posts/xyz/`, where “xyz” can be anything at all. Second, to put whatever it finds in this “xyz” spot inside an `_id` property in the router's `params` array. 
+Специальный синтаксис `:_id` сообщает маршрутизатору две вещи: первое, совпадает любой маршрут формы `/posts/xyz/`, где “xyz” может принимать любое значение. Второе, положить всё что найдено на месте “xyz” во внутрь свойства `_id` массива `params` маршрутизатора.
 
-Note that we're only using `_id` for convenience's sake here. The router has no way of knowing if you're passing it an actual `_id`, or just some random string of characters. 
+Обратите внимание мы используем `_id` здесь только ради удобства. Маршрутизатор не имеет возможности узнать отправляем ли мы актуальный `_id` или просто некоторую случайную строку симвовлов.
 
-We're now routing to the correct template, but we're still missing something: the router knows the `_id` of the post we'd like to display, but the template still has no clue. So how do we bridge that gap?
+Теперь мы маршрутизуем к правильному шаблону, но мы всё еще что-то теряем: маршрутизатор знает `_id` поста, который мы бы хотели показать, но шаблон еще не имеет ключа. Так как же нам преодолеть этот разрыв?
 
-Thankfully, the router has a clever built-in solution: it lets you specify a template's **data context**. You can think of the data context as the filling inside a delicious cake made of templates and layouts. Simply put, it's what you fill up your template with:
+К счастью, маршрутизатор имеет встроенное умное решение: он позволяет указать **контекст данных (data context)** для шаблона. Вы можете думать о данных контекста как о вкусном торте с начинкой, который сделан из шаблонов и макетов. Проще говоря это то чем вы заполняете шаблон:
 
 <%= diagram "router-diagram-2", "The data context.", "pull-center" %>
 
-In our case, we can get the proper data context by looking for our post based on the `_id` we got from the URL: 
+В нашем случае мы можем получить правильные контекст данных отыскав наш пост по `_id`, который мы получили из URL-а:
 
 ~~~js
 Router.map(function() {
@@ -256,17 +256,17 @@ Router.map(function() {
 <%= caption "lib/router.js" %>
 <%= highlight "4~7" %>
 
-So every time a user accesses this route, we'll find the appropriate post and pass it to the template. Remember that `findOne` returns a single post that matches a query, and that providing just an `id` as an argument is a shorthand for `{_id: id}`. 
+И так каждый раз когда пользователь обращается по этому маршруту мы находим соответствующий пост и отправляем его в шаблон. Напомним, что `findOne` возвращает единственный пост совпавший с запросом, и ему можно передать только один аргумент `id` для сокращения записи `{_id: id}`.
 
-Within the `data` function for a route, `this` corresponds to the currently matched route, and we can use `this.params` to access the named parts of the route (which we indicated by prefixing them with `:` inside our `path`).
+Внутри функции `data` для маршрута, `this` соответствует текущему совпавшему маршруту, и мы можем использовать `this.params` для доступа к именованым частям маршрута (которые мы обозначили с помощью префиксов `:` внутри нашего `path`).
 
 <% note do %>
 
-### More About Data Contexts
+### Подробнее О Контекстах С Данными
 
-By setting a template's *data context*, you can control the value of `this` inside template helpers.
+Через установку шаблоного контекста данных вы можете контролировать значение `this` внутри метода шаблона.
 
-This is usually done implicitly with the `{{#each}}` iterator, which automatically sets the data context of each iteration to the item currently being iterated on:
+Это обычно делается неявно в итераторе `{{#each}}`, который автоматически устанавливает контекст данных каждой итерации к текущему элементу итерации:
 
 ~~~html
 {{#each widgets}}
@@ -274,7 +274,7 @@ This is usually done implicitly with the `{{#each}}` iterator, which automatical
 {{/each}}
 ~~~
 
-But we can also do it explicitly using `{{#with}}`, which simply says "take this object, and apply the following template to it". For example, we can write:
+Но мы можем также сделать это явно используя `{{#with}}`, который просто говорит: "возьми этот объект, и примени следующий шаблон к нему". Например, мы можем написать:
 
 ~~~html
 {{#with myWidget}}
@@ -282,7 +282,7 @@ But we can also do it explicitly using `{{#with}}`, which simply says "take this
 {{/with}}
 ~~~
 
-It turns out you can achieve the same result by passing the context as an *argument* to the template call. So the previous block of code can be rewritten as:
+Оказывается вы можете добиться того же результата отправкой контекста как *аргумента* в месте вызова шаблона. Таким образом предыдущий блок кода может быть переписан так:
 
 ~~~js
 {{> widgetPage myWidget}}
@@ -290,11 +290,11 @@ It turns out you can achieve the same result by passing the context as an *argum
 
 <% end %>
 
-### Using a Dynamic Named Route Helper
+### Использование Методов Динамических Поименованных Маршрутов
 
-Finally, we need to make sure that we're pointing to the right place whevener we want to link to an individual post. Again, we could do something like `<a href="/posts/{{_id}}">`, but using a route helper is just more reliable. 
+Наконец мы должны убедиться, что указываем ли мы на правильное место, которое мы хотим связать с индивидуальным постом. Снова мы могли бы сделать как-то так `<a href="/posts/{{_id}}">`, но мы используем метод шаблона для маршрутизации - он просто более надёжен.
 
-We've named the post route `postPage`, so we can use a `{{pathFor 'postPage'}}` helper:
+Мы поименовали маршрут к посту как `postPage`, таким образом мы можем использовать метод шаблона `{{pathFor 'postPage'}}`:
 
 ~~~html
 <template name="postItem">
@@ -310,15 +310,15 @@ We've named the post route `postPage`, so we can use a `{{pathFor 'postPage'}}` 
 <%= highlight "6" %>
 <%= commit "5-3", "Routing to a single post page." %>
 
-But wait, how exactly does the router know where to get the `xyz` part in `/posts/xyz`? After all, we're not passing it any `_id`. 
+Но подождите, как именно маршрутизатор знает где взять часть `xyz` в `/posts/xyz`? В конце концов мы не передаем ему любой `_id`.
 
-It turns out that Iron Router is smart enough to figure it out by itself. We're telling the router to use the `postPage` route, and the router knows that this route requires an `_id` of some kind (since that's how we defined our `path`) .
+Оказывается Iron Router достаточно умён чтобы понять это самому. Мы говорим маршрутизатору использовать маршурут `postPage`, и маршрутизатор узнаёт, что этот маршрут требует какой-то `_id` (так вот как мы определили наш `path`).
 
-So the router will look for this `_id` in the most logical place available: the data context of the `{{pathFor 'postPage'}}` helper, in other words `this`. And it so happens that our `this` corresponds to a post, which (surprise!) does possess an `_id` property. 
+Таким образом маршрутизатор поищет этот `_id` в наиболее логичных доступных местах: контекст данных метода `{{pathFor 'postPage'}}`, другими словами `this`. А бывает так, что наш `this` соответствует посту, который (сюрприз!) действительно обладает свойством `_id`.
 
-Alternatively, you can also explicitely tell the router where you'd like it to look for the `_id` property, by passing a second argument to the helper (i.e. `{{pathFor 'postPage' someOtherPost}}`). A practical use of this pattern would be getting the link to the previous or next posts in a list, for example. 
+В качестве альтернативы вы также можете явно говорить маршрутизатору где бы вы хотели найти свойство `_id`, отправив второй аргумент методу шаблона (т.е. `{{pathFor 'postPage' someOtherPost}}`). Практически использовать этот паттерн можно, например, для получения предыдущих или следующих постов в списке.
 
-To see if it works correctly, browse to the post list and click on one of the 'Discuss' links. You should see something like this:
+Чтобы убедиться, что всё работает правильно, в браузере проследуйте к списку постов и кликните по какой-нибудь ссылке 'Discuss'. Вы должны увидеть что-то подобное этому:
 
 <%= screenshot "5-2", "A single post page." %>
 
@@ -326,10 +326,10 @@ To see if it works correctly, browse to the post list and click on one of the 'D
 
 ### HTML5 pushState
 
-One thing to realise is that these URL changes are happening using [HTML5 pushState](https://developer.mozilla.org/en-US/docs/Web/Guide/API/DOM/Manipulating_the_browser_history?redirectlocale=en-US&redirectslug=Web%2FGuide%2FDOM%2FManipulating_the_browser_history). 
+Воспользуйтесь этим [HTML5 pushState](https://developer.mozilla.org/en-US/docs/Web/Guide/API/DOM/Manipulating_the_browser_history?redirectlocale=en-US&redirectslug=Web%2FGuide%2FDOM%2FManipulating_the_browser_history) для понимания того, как происходят изменения URL-ов.
 
-The Router picks up clicks on URLs that are internal to the site, and prevents the browser from browsing away from the app, instead just making the necessary changes to the app's state. 
+Маршрутизатор ловит клики по URL-ам, которые внутрение для сайта, и предотвращает выход браузера из приложения, для этого вносит необходимые изменения в состояние приложения.
 
-If everything is working correctly the page should change instantaneously. In fact, sometimes things change so fast that some kind of page transition might be needed. This is outside of the scope of this chapter, but an interesting topic nonetheless.
+Если все работает корректно, страница должна измениться мгновенно. По факту, иногда всё меняется так быстро, что может понадобиться какая-нибудь страница перехода. Это выходит за рамки этой главы, но тем не менее эта тема интересна.
 
 <% end %>
