@@ -1,45 +1,45 @@
 ---
-title: Voting
+title: Голосование
 slug: voting
 date: 0013/01/01
 number: 13
 points: 10
 photoUrl: http://www.flickr.com/photos/ikewinski/8561920811/
 photoAuthor: Mike Lewinski
-contents: Build a system where users can vote on posts.|Rank our posts by vote on a "best" post page.|Learn how to write a general handlebars helper.|Learn a little more about data security in Meteor.|Cover some interesting performance considerations in MongoDB.
+contents: Построим систему, чтобы пользователи могли голосовать за пост.|Расположим наши посты по количеству голосов на специальной странице "лучшее".|Научимся создавать глобальные handlebars helper.|Узнаем немного больше о безопасности данных в Meteor.|Затронем некоторые интересные принципы производительности в MongoDB.
 paragraphs: 49
 ---
 
-Now that our site is getting more popular, finding the best links is quickly going to get tricky. What we need is some kind of ranking system to order our posts by.
+Теперь, когда наш сайт становится все популярнее, быстро найти нужную ссылку становится той еще задачей. Чтобы решить эту проблему, хорошо бы нам сделать систему оценок для упорядочивания постов.
 
-We could build a complex ranking system with karma, time-based decay of points, and many other things (most of which are implemented in [Telescope](http://telesc.pe), Microscope's big brother). But for our app, we'll keep things simple and just rate posts by the number of votes they've received.
+Мы можем сделать сложную систему оценивания с кармой, уменьшающимися со временем очками, или еще каким-нибудь из многих способов (большинство которых уже сделаны в [Telescope](http://telesc.pe), старшем брате Microscope). Но для нашего приложения мы не будем городить что-то сложное, а просто оценим посты по количеству полученных за пост голосов.
 
-Let's start by giving users a way to vote on posts. 
+Начнем с того, что дадим возможность пользователям голосовать за посты. 
 
-### Data Model
+### Модель Данных
 
-We'll store a list of upvoters on each post so we know whether to show the upvote button to users, as well as to prevent people from voting twice. 
+Мы будем хранить список голосов пользователей для каждого поста для того чтобы знать надо ли нам показывать кнопку для голосования или нет, чтобы исключить возможность проголосовать дважды.
 
 <% note do %>
 
-### Data Privacy & Publications
+### Приватность Данных и Публикации
 
-We'll be publishing these lists of upvoters to all users, which will also automatically make that data publicly accessible via the browser console. 
+Мы будем публиковать эти списки голосов всем пользователям, что автоматически сделает эти данные публично доступными через консоль браузера. 
 
-This is the kind of data privacy problem that can arise from the way collections work. For example, do we want people to be able to find out who has voted for their posts? In our case making that information publicly available won't really have any consequences, but it's important to at least acknowledge the issue. 
+Это тот проблемный случай приватности данных, который может возникнуть вследствие того как устроена работа с коллекциями. К примеру, хотим ли мы чтобы пользователи видели кто голосовал за пост? В нашем случае делая доступной эту информацию всем пользователям не будет иметь каких-то последствий, но важно, как минимум, отметить, что такая проблема есть. 
 
-Also note that if we *did* want to restrict some of this information, we'd have to make sure that the client can't tamper with the `fields` options of our publication, either by removing that property server-side, or by not passing the whole options object from client to server. 
+Так же следует учесть, что если бы мы *все же хотели* ограничить часть из этой информации, нам следовало бы удостовериться в том, чтобы пользователь не смог бы исказить какие-либо опции `fields` нашей публикации посредством удаления этой опции на стороне сервера, либо не передавая объект целиком от клиента на сервер. 
 
 <% end %>
 
-We'll also denormalize the total number of upvoters on a post to make it easier to retrieve that figure. So we'll be adding two attributes to our posts, `upvoters` and `votes`. Let's start by adding them to our fixtures file:
+Мы так же денормализуем общее количество голосовавших за пост для того, чтобы было легче получать эти данные. Для этого мы добавим два дополнительных атрибута  к нашим 'постам' - 'проголосовавшие' (`upvoters`) и 'голоса' (`votes`). Давайте начнем с того, что добавим их в наш fixture-файл:
 
 ~~~js
-// Fixture data 
+// Fixture данные 
 if (Posts.find().count() === 0) {
   var now = new Date().getTime();
   
-  // create two users
+  // создадим двух пользователей
   var tomId = Meteor.users.insert({
     profile: { name: 'Tom Coleman' }
   });
@@ -64,7 +64,7 @@ if (Posts.find().count() === 0) {
     userId: tom._id,
     author: tom.profile.name,
     submitted: now - 5 * 3600 * 1000,
-    body: 'Interesting project Sacha, can I get involved?'
+    body: 'Интересный проектик, Sacha, можно я тоже приму участие?'
   });
   
   Comments.insert({
@@ -72,7 +72,7 @@ if (Posts.find().count() === 0) {
     userId: sacha._id,
     author: sacha.profile.name,
     submitted: now - 3 * 3600 * 1000,
-    body: 'You sure can Tom!'
+    body: 'Разумеется можешь, Tom!'
   });
   
   Posts.insert({
@@ -111,19 +111,19 @@ if (Posts.find().count() === 0) {
 <%= caption "server/fixtures.js" %>
 <%= highlight "22, 48, 58, 69" %>
 
-As usual, stop your app, run `meteor reset`, restart your app, and create a new user account. Let's then also make sure these two properties are initialized when posts are created:
+Как всегда, остановим наше приложение, запустив `meteor reset`, перезапустим приложение и создадим нового пользователя. Так же давайте убедимся в том, что два новых атрибута инициализировались при создании нового поста:
 
 ~~~js
 //...
 
-// check that there are no previous posts with the same link
+// проверим не было ли уже постов с такой же ссылкой
 if (postAttributes.url && postWithSameLink) {
   throw new Meteor.Error(302, 
-    'This link has already been posted', 
+    'Эта ссылка уже была опубликована', 
     postWithSameLink._id);
 }
 
-// pick out the whitelisted keys
+// возьмем только нужные (безопасные) поля
 var post = _.extend(_.pick(postAttributes, 'url', 'title', 'message'), {
   userId: user._id, 
   author: user.username, 
@@ -142,9 +142,9 @@ return postId;
 <%= caption "collections/posts.js" %>
 <%= highlight "16~17" %>
 
-### Building our Voting Templates
+### Создаем Шаблоны для Голосования
 
-First off, we'll add an upvote button to our post partial:
+Сначала добавим кнопку для голосования в часть, отвечающую за посты:
 
 ~~~html
 <template name="postItem">
@@ -166,9 +166,9 @@ First off, we'll add an upvote button to our post partial:
 <%= caption "client/views/posts/post_item.html" %>
 <%= highlight "3,7" %>
 
-<%= screenshot "13-1", "The upvote button" %>
+<%= screenshot "13-1", "Кнопка голосования" %>
 
-Next, we'll call a server upvote Method when the user clicks on the button:
+Далее вызовем Метод, отвечающий за голосование, когда пользователь кликнет по кнопке:
 
 ~~~js
 //...
@@ -183,7 +183,7 @@ Template.postItem.events({
 <%= caption "client/views/posts/post_item.js" %>
 <%= highlight "3~8" %>
 
-Finally, we'll go back to our `collections/posts.js` file and add a Meteor server-side Method that will upvote posts:
+И в конце, изменим наш `collections/posts.js` файл и добавим Метод на серверной стороне, который будет увеличивать голоса для поста:
 
 ~~~js
 Meteor.methods({
@@ -193,16 +193,16 @@ Meteor.methods({
   
   upvote: function(postId) {
     var user = Meteor.user();
-    // ensure the user is logged in
+    // удостоверимся, что пользователь залогинен
     if (!user)
-      throw new Meteor.Error(401, "You need to login to upvote");
+      throw new Meteor.Error(401, "Надо залогиниться чтобы голосовать");
     
     var post = Posts.findOne(postId);
     if (!post)
-      throw new Meteor.Error(422, 'Post not found');
+      throw new Meteor.Error(422, 'Пост не найден');
     
     if (_.include(post.upvoters, user._id))
-      throw new Meteor.Error(422, 'Already upvoted this post');
+      throw new Meteor.Error(422, 'Вы уже голосовали за этот пост');
     
     Posts.update(post._id, {
       $addToSet: {upvoters: user._id},
@@ -214,15 +214,15 @@ Meteor.methods({
 <%= caption "collections/posts.js" %>
 <%= highlight "6~23" %>
 
-<%= commit "13-1", "Added basic upvoting algorithm." %>
+<%= commit "13-1", "Добавили простой алгоритм голосования." %>
 
-This Method is fairly straightforward. We do some defensive checks to ensure that the user is logged in and that the post really exists. Then we double check that the user hasn't already voted for the post, and if they haven't we increment the vote's total score and add the user to the set of upvoters.
+Этот Метод достаточно прямолинеен. Сначала мы делаем парочку проверок, чтобы удостовериться что пользователь залогинен, и что пост действительно существует. После этого проверяем голосовал ли уже пользователь за этот пост, и если не голосовал, мы увеличиваем общее количество голосов за пост на один, и добавляем пользователя к полю "upvoters".
 
-This final step is interesting, as we've used a couple of special Mongo operators. There are many more to learn, but these two are extremely helpful: `$addToSet` adds an item to an array property as long as it doesn't already exist, and `$inc` simply increments an integer field.
+Заключительный шаг интересен тем, что мы использовали пару новых Mongo операторов. Есть еще множество других, которые следует знать, но этот чудовищно полезен: `$addToSet` добавляет элемент к массиву только в том случае, если такового еще в нем нет, а оператор `$inc` попросту увеличивает на единицу цифровое поле.
 
-### User Interface Tweaks
+### Тюнингуем Пользовательский Интерфейс
 
-If the user is not logged in, or has already upvoted a post, they won't be able to vote. To reflect this in our UI, we'll use a helper to conditionally add a `disabled` CSS class to the upvote button.
+Если пользователь не залогинен, то он не сможет проголосовать. Чтобы отразить это в нашем дизайне, добавим helper, который по условию добавит `disabled` CSS класс к кнопке "Проголосовать".
 
 ~~~html
 <template name="postItem">
@@ -264,17 +264,17 @@ Template.postItem.events({
 <%= caption "client/views/posts/post_item.js" %>
 <%= highlight "8~15, 19" %>
 
-We're changing our class from `.upvote` to `.upvotable`, so don't forget to change the click event handler too.
+Мы меняем наш класс с `.upvote` на `.upvotable`, поэтому надо не забыть так же изменить обработчик на клик.
 
-<%= screenshot "13-2", "Greying out upvote buttons." %>
+<%= screenshot "13-2", "Обесцвечиваем кнопку голосования." %>
 
-<%= commit "13-2", "Grey out upvote link when not logged in / already voted." %>
+<%= commit "13-2", "Обесцветили кнопку голосования если пользователь незалогинен / уже голосовал." %>
 
-Next, you may notice that posts with a single vote are labelled "1 vote**s**", so let's take the time to pluralize those labels properly. Pluralization can be a complicated process, but for now we'll do it in a fairly simplistic way. We'll make a general Handlebars helper that we can use anywhere:
+Вы наверное заметили, что посты, у которых есть всего один голос, отмечены как "1 vote**s**", поэтому пора нам сделать так, чтобы окончания ставились правильно. Делать множественную форму числа - это довольно сложный процесс, но мы пока сделаем все достаточно просто (*примечание*: в отличии от английского языка, в русском нам понадобилось бы немного доработать оригинальный helper, потому что нам понадобится еще одно условие когда количество голосов равно двум, а кроме того  окончания еще и будут зависеть от рода, но это все мы опустим, ибо наш сайт работает на английском). Мы создадим такой Handlebars helper, который мы сможем использовать повсюду:
 
 ~~~js
 UI.registerHelper('pluralize', function(n, thing) {
-  // fairly stupid pluralizer
+  // простой как барабан омножествитель
   if (n === 1) {
     return '1 ' + thing;
   } else {
@@ -284,7 +284,7 @@ UI.registerHelper('pluralize', function(n, thing) {
 ~~~
 <%= caption "client/helpers/handlebars.js" %>
 
-The helpers we've created before have been tied to the manager and template that they apply to. But by using `Handlebars.registerHelper`, we've created a *global* helper that can be used within any template:
+Все helper'ы, которые мы создали до этого были привязаны к менеджеру и шаблону, к которым они применялись. Но если использовать `Handlebars.registerHelper`, мы создадим *глобальный* helper, который мы сможем использовать с любым шаблоном:
 
 ~~~html
 <template name="postItem">
@@ -301,23 +301,23 @@ The helpers we've created before have been tied to the manager and template that
 <%= caption "client/views/posts/post_item.html" %>
 <%= highlight "4, 6" %>
 
-<%= screenshot "13-3", "Perfecting Proper Pluralization (now say that 10 times)" %>
+<%= screenshot "13-3", "Совершенствуем омножествитель." %>
 
-<%= commit "13-3", "Added pluralize helper to format text better." %>
+<%= commit "13-3", "Добавили helper для выставления правильного окончания." %>
 
-We should now see "1 vote".
+Теперь мы должны увидеть "1 vote".
 
-### Smarter Voting Algorithm
+### Более Умный Алгоритм Голосования
 
-Our upvoting code is looking good, but we can still do better. In the upvote Method, we make two calls to Mongo: one to grab the post, then another to update it. 
+Наш код для голосования выглядит вполне себе, но можно сделать его еще лучше. В нашем Методе, отвечающим за голосование, мы делаем два запроса в Mongo: один чтобы взять пост, а второй для того чтобы его обновить. 
 
-There are two issues with this. Firstly, it's somewhat inefficient to go to the database twice. But more importantly, it introduces a race condition. We are following the following algorithm:
+С этим есть пару нюансов. Во-первых, не очень то эффективно два раза обращаться к базе данных. А во-вторых, что более важно, у нас появляется так называемое состояние гонки (англ. race condition). В нашем случае мы как бы следуем по такому алгоритму:
 
-1. Grab the post from the database.
-2. Check if the user has voted.
-3. If not, do a vote by the user.
+1. Взять пост из базы данных.
+2. Проверить голосовал ли пользователь за этот пост.
+3. Если не голосовал, то проголосовать.
 
-What if the same user voted for the post again in between steps 1 and 3? Our current code opens the door to the user being able to vote for the same post twice. Thankfully, Mongo allows us to be smarter and combine steps 1-3 into a single Mongo command:
+Однако что если тот же пользователь будет голосовать за один и тот же пост в промежутке между первым и третьим шагами? Наш текущий код позволит проголосовать за один и тот же пост дважды. Хорошо что на этот счет Mongo позволяет нам быть умнее и объединить первый и третий шаги в один вызов:
 
 ~~~js
 Meteor.methods({
@@ -327,9 +327,9 @@ Meteor.methods({
   
   upvote: function(postId) {
     var user = Meteor.user();
-    // ensure the user is logged in
+    // удостоверимся, что пользователь залогинен
     if (!user)
-      throw new Meteor.Error(401, "You need to login to upvote");
+      throw new Meteor.Error(401, "Надо залогиниться чтобы голосовать");
     
     Posts.update({
       _id: postId, 
@@ -344,44 +344,44 @@ Meteor.methods({
 <%= caption "collections/posts.js" %>
 <%= highlight "12~15" %>
 
-<%= commit "13-4", "Better upvoting algorithm." %>
+<%= commit "13-4", "Улучшенный алгоритм голосования." %>
 
-What we are saying is "find all the posts with this `id` that this user hasn't yet voted for, and update them in this way". If the user *hasn't* yet voted, it will of course find the post with that `id`. On the other hand if the user *has* voted, then the query will match no documents, and consequently nothing will happen.
+То, что мы говорим этим, так это "найти все посты вот с этим `id`, где пользователь еще не голосовал, и обновить их таким вот образом". Если пользователь *еще не* проголосовал, то, конечно же, найдется пост с таким `id`. А если пользователь *уже* проголосовал, то результатом запроса будет пустое множество, и далее, следовательно, далее ничего не произойдет.
 
-The only downside is that now we can't tell the user that they've already voted for the post (since we got rid of the database call that checked this). But they should know that from the "upvote" button being disabled in the user interface anyway.
+Обратной стороной данного подхода является то, что теперь мы не сможем сказать голосовал ли уже пользователь за этот пост (поскольку мы избавились от запроса в базу данных на соответствующую проверку). Но пользователь и так должен понять голосовал они или нет по тому, активная ли кнопка "Проголосовать".
 
 <% note do %>
 
-### Latency Compensation
+### Компенсация Задержки
 
-Let's say you tried to cheat and send one of your posts to the top of the list by tweaking its number of votes:
+Давайте предположим, что вы решили схитрить и переместить ваш пост на первое место в рейтинге, немного подправив количество голосов за него:
 
 ~~~js
 > Posts.update(postId, {$set: {votes: 10000}});
 ~~~
-<%= caption "Browser console" %>
+<%= caption "Консоль браузера." %>
 
-(Where `postId` is the id of one of your posts)
+(Где `postId` это id вашего поста)
 
-This brazen attempt at gaming the system would be caught by our `deny()` callback (in `collections/posts.js`, remember?) and immediately negated.
+Такого рода наглая попытка поиграть с системой будет поймана нашим `deny()` callback-ом (тот что `collections/posts.js`, помните?) и будет немедленно сведена на нет.
 
-But if you look carefully, you might be able to see latency compensation in action. It may be quick, but the post will briefly jump to the top of the list before shooting back into position. 
+Однако если присмотреться повнимательнее, мы сможем увидеть компенсацию задержки в действии. Это произойдет достаточно быстро, однако можно будет заметить как на короткое время пост переместится на первое место, а потом грохнется обратно там где он был. 
 
-What's happened? In your local `Posts` collection, the `update` was applied without incident. This happens instantly, so the post shot to the top of the list. Meanwhile, on the server, the `update` was being denied. So some time later (measured in the milliseconds if you are running Meteor on your own machine), the server returned an error, telling the local collection to revert itself. 
+Так что же произошло? В нашей локальной коллекции `Posts` обновление произошло без происшествий. Это случилось молниеносно, и наш пост переместился на первое место. В это время на сервере в таком такое обновлении было отказано. Поэтому некоторое время спустя (речь идет о нескольких миллисекундах, если вы пользуетесь Meteor'ом на своей локальной машине), сервер вернул error, тем самым говоря локальной коллекции откатиться обратно. 
 
-The end result: while waiting for the server to respond, the user interface can't help but trust the local collection. As soon as the server comes back and denies the modification, the user interfaces adapts to reflect that. 
+В конце концов получается, что до тех пор пока сервер не подтвердит запрос, пользовательскому интерфейсу ничего не остается как доверять локальной коллекции. А как только будет получен ответ с серверной части, пользовательский интерфейс прореагирует соответствующе, чтобы отразить результат ответа сервера. 
 
 <% end %>
 
-### Ranking the Front Page Posts
+### Ранжируем Посты на Главной Странице
 
-Now that we have a score for each post based on the number of votes, let's display a list of the best posts. To do so, we'll see how to manage two separate subscriptions against the post collection, and make our `postsList` template a bit more general.
+Теперь когда у нас есть количество голосов для каждого поста, давайте покажем список из лучших постов. Для этого мы научимся управлять двумя отдельными подписками коллекции постов, а так же сделаем наш `postsList` шаблон немного более универсальным.
 
-To start off, we'll want to have *two* subscriptions, one for each sort order. The trick here is that both subscriptions will subscribe to the *same* `posts` publication, only with different arguments!
+Начнем с того, что нам нужно *две* подписки, одна на каждый вид выборки, или, можно сказать, тип сортировки. Магия тут в том, что обе подписки будут подписаны на одну и ту же коллекцию, но только с разными аргументами!
 
-We'll also create two new routes called `newPosts` and `bestPosts`, accessible at the URLs `/new` and `/best` respectively (along with `/new/5` and `/best/5` for our pagination, of course).
+Мы так же создадим два маршрута, `newPosts` и `bestPosts`, доступных по адресам `/new` и `/best`, соответственно (с учетом использования, например, `/new/5` и `/best/5` для нужд перелистывания на соответствующую страницу).
 
-To do this, we'll *extend* our `PostsListController` into two distinct `NewPostsListController` and `BestPostsListController` controllers. This will let us re-use the exact same route options for both the `home` and `newPosts` routes, by giving us a single `NewPostsListController` to inherit from. And additionally, it's just a nice illustration of how flexible Iron Router can be. 
+Для этого мы *расширим* наш `PostsListController` контроллер через два различных контроллера `NewPostsListController` и `BestPostsListController`. Это позволит нам использовать те же самые параметры маршрутизации для маршрутов `home` и `newPosts`, дав `NewPostsListController` контроллеру наследование. К тому же это классная демонстрация того, насколько гибким может быть Iron Router.
 
 ~~~js
 PostsListController = RouteController.extend({
@@ -443,11 +443,11 @@ Router.map(function() {
 <%= caption "lib/router.js" %>
 <%= highlight "8,20,25~37,40~53" %>
 
-Note that now that we have more than one route, we're taking the `nextPath` logic out of `PostsListController` and into `NewPostsListController` and `BestPostsListController`, since the path will be different in either case. 
+Заметьте, что теперь когда у нас более чем один маршрут, мы выносим `nextPath` логику из `PostsListController` в `BestPostsListController`, поскольку путь будет различным в обоих случаях. 
 
-Additionally, when we sort by `votes`, we have a secondary sort by submitted timestamp to ensure that the ordering is correct.
+Так же, сортируя по `votes`, мы используем еще сортировку по времени чтобы, порядок получился правильным.
 
-With our new controllers in place, we can now safely get rid of the previous `postsList` route. Just delete the following code:
+Теперь когда наш новый контроллер сделан, мы со спокойной душой можем удалить предыдущий `postsList` маршрут. Просто удалим следующий код:
 
 ```
  this.route('postsList', {
@@ -457,7 +457,7 @@ With our new controllers in place, we can now safely get rid of the previous `po
 ```
 <%= caption "lib/router.js" %>
 
-We'll also add links in the header:
+Добавим так же ссылки в заголовок:
 
 ~~~html
 <template name="header">
@@ -497,7 +497,7 @@ We'll also add links in the header:
 <%= caption "client/views/include/header.html" %>
 <%= highlight "9, 12~17" %>
 
-We also need to update our post deleting event handler:
+Нам так же надо обновить наш обработчик удаления поста:
 
 ~~~html
   'click .delete': function(e) {
@@ -514,17 +514,17 @@ We also need to update our post deleting event handler:
 <%= highlight "7" %>
 
 
-With all this done, we now gain a best posts list:
+Когда все это сделано, у нас теперь есть список постов ранжированных по количеству собранных голосов:
 
-<%= screenshot "13-4", "Ranking by points" %>
+<%= screenshot "13-4", "Ранжируем по голосам." %>
 
-<%= commit "13-5", "Added routes for post lists, and pages to display them." %>
+<%= commit "13-5", "Добавили пути для списков постов и страницы для их отображения." %>
 
-### A Better Header
+### Улучшенный Заголовок
 
-Now that we have two post list pages, it can be hard to know just which list you're currently viewing. So let's revisit our header to make it more obvious. We'll create a `header.js` manager and create a helper that uses the current path and one or more named routes to set an active class on our navigation items:
+Теперь когда у нас есть две страницы для отображения списка постов, трудно понять какой именно список мы сейчас смотрим. Поэтом давайте вернемся к заголовку для того, чтобы сделать его более очевидным. Мы создадим новый менеджер `header.js` и создадим helper, который будет использовать текущий путь и один или более именованных маршрутов для того, чтобы установить активный класс для нашей навигации:
 
-The reason why we want to support multiple named routes is that both our `home` and `newPosts` routes (which correspond to the `/` and `/new` URLs respectively) bring up the same template. Meaning that our `activeRouteClass` should be smart enough to make the `<li>` tag active in both cases. 
+Причина зачем нам необходимо поддерживать множество имен маршрутов в том, что оба маршрута `home` и `newPosts` (которые соответствуют путям `/` и `/new` соответственно) используюи один и тот же шаблон. Это означает, что наш `activeRouteClass` должен быть достаточно умным, чтобы делать тэг `<li>` активным в обоих случаях.
 
 ~~~html
 <template name="header">
@@ -580,24 +580,24 @@ Template.header.helpers({
 ~~~
 <%= caption "client/views/includes/header.js" %>
 
-<%= screenshot "13-5", "Showing the active page" %>
+<%= screenshot "13-5", "Показываем активную страницу." %>
 
 <% note do %>
 
-### Helper Arguments
+### Аргументы Helper'а
 
-We haven't used that specific pattern up to now, but just like any other Handlebars tags, template helper tags can take arguments. 
+До этого момента мы не использовали какие-нибудь особые конструкции, но, так же как и любые другие Handlebars тэги, тэги шаблонного helper'а тоже могут принимать аргументы.
 
-And while you can of course pass specific named arguments to your function, you can also pass an unspecified number of anonymous parameters and retrieve them by calling the `arguments` object inside a function. 
+И, разумеется, хоть вы и можете передавать именные аргументы в вашу функцию, вы так же можете передать любое количество анонимных параметров, и доставать их через `arguments` объект внутри функции.
 
-In this last case, you will probably want to convert the `arguments` object to a regular JavaScript array and then call `pop()` on it to get rid of the hash added at the end by Handlebars.
+В последнем случае, вы вероятно захотите сконвертировать `arguments` объект в обычный JavaScript массив, и затем вызвать `pop()` на него чтобы избавится от '/', добавленного в конец Handlebars'ом.
 
 <% end %>
 
-For each navigation item, the `activeRouteClass` helper takes a list of route names, and then uses Underscore's `any()` helper to see if any of the routes pass the test (i.e. their corresponding URL being equal to the current path). 
+Для каждого пути `activeRouteClass` helper возьмет список маршрутных имен, а затем использует на низ Underscore'овский `any()` метод для того, чтобы проверить приходит ли любой из путей тест (проще говоря совпадает ли наш URL с каким-либо путем из списка маршрутных имен).
 
-If any of the routes do match up with the current path, `any()` will return `true`. Finally, we're taking advantage of the `boolean && string` JavaScript pattern where `false && myString` returns `false`, but `true && myString` returns `myString`. 
+Если какой-либо из путей совпадет с текущим путем, то `any()` вернет `true`. А еще мы воспользуемся особенностью pattern'а `boolean && string` в JavaScript, когда `false && myString` возвратит `false`, а `true && myString` возвратит `myString`.
 
-<%= commit "13-6", "Added active classes to the header." %>
+<%= commit "13-6", "Добавили активные классы к заголовку." %>
 
-Now that users can vote on posts in real-time, you will see items jumping up and down the homepage as their ranking change. but wouldn't it be nice if there was a way to smooth out all this with a few well-timed animations?
+Теперь пользователи могут в реальном времени голосовать за посты, а мы увидем как они прыгают туда-сюда в виду изменения голосов за них. Но разве не было бы круто, если бы все это не сопровождалось парочкой уместных плавных анимаций?
