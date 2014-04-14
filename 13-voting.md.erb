@@ -3,33 +3,36 @@ title: Voting
 slug: voting
 date: 0013/01/01
 number: 13
+points: 10
+photoUrl: http://www.flickr.com/photos/ikewinski/8561920811/
+photoAuthor: Mike Lewinski
 contents: Build a system where users can vote on posts.|Rank our posts by vote on a "best" post page.|Learn how to write a general handlebars helper.|Learn a little more about data security in Meteor.|Cover some interesting performance considerations in MongoDB.
 paragraphs: 49
 ---
 
-////
+Now that our site is getting more popular, finding the best links is quickly going to get tricky. What we need is some kind of ranking system to order our posts by.
 
-////
+We could build a complex ranking system with karma, time-based decay of points, and many other things (most of which are implemented in [Telescope](http://telesc.pe), Microscope's big brother). But for our app, we'll keep things simple and just rate posts by the number of votes they've received.
 
-////
+Let's start by giving users a way to vote on posts. 
 
 ### Data Model
 
-////
+We'll store a list of upvoters on each post so we know whether to show the upvote button to users, as well as to prevent people from voting twice. 
 
 <% note do %>
 
 ### Data Privacy & Publications
 
-////
+We'll be publishing these lists of upvoters to all users, which will also automatically make that data publicly accessible via the browser console. 
 
-////
+This is the kind of data privacy problem that can arise from the way collections work. For example, do we want people to be able to find out who has voted for their posts? In our case making that information publicly available won't really have any consequences, but it's important to at least acknowledge the issue. 
 
-////
+Also note that if we *did* want to restrict some of this information, we'd have to make sure that the client can't tamper with the `fields` options of our publication, either by removing that property server-side, or by not passing the whole options object from client to server. 
 
 <% end %>
 
-////
+We'll also denormalize the total number of upvoters on a post to make it easier to retrieve that figure. So we'll be adding two attributes to our posts, `upvoters` and `votes`. Let's start by adding them to our fixtures file:
 
 ~~~js
 // Fixture data 
@@ -108,7 +111,7 @@ if (Posts.find().count() === 0) {
 <%= caption "server/fixtures.js" %>
 <%= highlight "22, 48, 58, 69" %>
 
-////
+As usual, stop your app, run `meteor reset`, restart your app, and create a new user account. Let's then also make sure these two properties are initialized when posts are created:
 
 ~~~js
 //...
@@ -141,7 +144,7 @@ return postId;
 
 ### Building our Voting Templates
 
-////
+First off, we'll add an upvote button to our post partial:
 
 ~~~html
 <template name="postItem">
@@ -165,7 +168,7 @@ return postId;
 
 <%= screenshot "13-1", "The upvote button" %>
 
-////
+Next, we'll call a server upvote Method when the user clicks on the button:
 
 ~~~js
 //...
@@ -180,7 +183,7 @@ Template.postItem.events({
 <%= caption "client/views/posts/post_item.js" %>
 <%= highlight "3~8" %>
 
-////
+Finally, we'll go back to our `collections/posts.js` file and add a Meteor server-side Method that will upvote posts:
 
 ~~~js
 Meteor.methods({
@@ -213,13 +216,13 @@ Meteor.methods({
 
 <%= commit "13-1", "Added basic upvoting algorithm." %>
 
-////
+This Method is fairly straightforward. We do some defensive checks to ensure that the user is logged in and that the post really exists. Then we double check that the user hasn't already voted for the post, and if they haven't we increment the vote's total score and add the user to the set of upvoters.
 
-////
+This final step is interesting, as we've used a couple of special Mongo operators. There are many more to learn, but these two are extremely helpful: `$addToSet` adds an item to an array property as long as it doesn't already exist, and `$inc` simply increments an integer field.
 
 ### User Interface Tweaks
 
-////
+If the user is not logged in, or has already upvoted a post, they won't be able to vote. To reflect this in our UI, we'll use a helper to conditionally add a `disabled` CSS class to the upvote button.
 
 ~~~html
 <template name="postItem">
@@ -261,16 +264,16 @@ Template.postItem.events({
 <%= caption "client/views/posts/post_item.js" %>
 <%= highlight "8~15, 19" %>
 
-////
+We're changing our class from `.upvote` to `.upvotable`, so don't forget to change the click event handler too.
 
 <%= screenshot "13-2", "Greying out upvote buttons." %>
 
 <%= commit "13-2", "Grey out upvote link when not logged in / already voted." %>
 
-////
+Next, you may notice that posts with a single vote are labelled "1 vote**s**", so let's take the time to pluralize those labels properly. Pluralization can be a complicated process, but for now we'll do it in a fairly simplistic way. We'll make a general Handlebars helper that we can use anywhere:
 
 ~~~js
-Handlebars.registerHelper('pluralize', function(n, thing) {
+UI.registerHelper('pluralize', function(n, thing) {
   // fairly stupid pluralizer
   if (n === 1) {
     return '1 ' + thing;
@@ -281,7 +284,7 @@ Handlebars.registerHelper('pluralize', function(n, thing) {
 ~~~
 <%= caption "client/helpers/handlebars.js" %>
 
-////
+The helpers we've created before have been tied to the manager and template that they apply to. But by using `Handlebars.registerHelper`, we've created a *global* helper that can be used within any template:
 
 ~~~html
 <template name="postItem">
@@ -302,19 +305,19 @@ Handlebars.registerHelper('pluralize', function(n, thing) {
 
 <%= commit "13-3", "Added pluralize helper to format text better." %>
 
-////
+We should now see "1 vote".
 
 ### Smarter Voting Algorithm
 
-////
+Our upvoting code is looking good, but we can still do better. In the upvote Method, we make two calls to Mongo: one to grab the post, then another to update it. 
 
-////
+There are two issues with this. Firstly, it's somewhat inefficient to go to the database twice. But more importantly, it introduces a race condition. We are following the following algorithm:
 
-1. ////
-2. ////
-3. ////
+1. Grab the post from the database.
+2. Check if the user has voted.
+3. If not, do a vote by the user.
 
-////
+What if the same user voted for the post again in between steps 1 and 3? Our current code opens the door to the user being able to vote for the same post twice. Thankfully, Mongo allows us to be smarter and combine steps 1-3 into a single Mongo command:
 
 ~~~js
 Meteor.methods({
@@ -343,42 +346,42 @@ Meteor.methods({
 
 <%= commit "13-4", "Better upvoting algorithm." %>
 
-////
+What we are saying is "find all the posts with this `id` that this user hasn't yet voted for, and update them in this way". If the user *hasn't* yet voted, it will of course find the post with that `id`. On the other hand if the user *has* voted, then the query will match no documents, and consequently nothing will happen.
 
-////
+The only downside is that now we can't tell the user that they've already voted for the post (since we got rid of the database call that checked this). But they should know that from the "upvote" button being disabled in the user interface anyway.
 
 <% note do %>
 
 ### Latency Compensation
 
-////
+Let's say you tried to cheat and send one of your posts to the top of the list by tweaking its number of votes:
 
 ~~~js
 > Posts.update(postId, {$set: {votes: 10000}});
 ~~~
 <%= caption "Browser console" %>
 
-////
+(Where `postId` is the id of one of your posts)
 
-////
+This brazen attempt at gaming the system would be caught by our `deny()` callback (in `collections/posts.js`, remember?) and immediately negated.
 
-////
+But if you look carefully, you might be able to see latency compensation in action. It may be quick, but the post will briefly jump to the top of the list before shooting back into position. 
 
-////
+What's happened? In your local `Posts` collection, the `update` was applied without incident. This happens instantly, so the post shot to the top of the list. Meanwhile, on the server, the `update` was being denied. So some time later (measured in the milliseconds if you are running Meteor on your own machine), the server returned an error, telling the local collection to revert itself. 
 
-////
+The end result: while waiting for the server to respond, the user interface can't help but trust the local collection. As soon as the server comes back and denies the modification, the user interfaces adapts to reflect that. 
 
 <% end %>
 
 ### Ranking the Front Page Posts
 
-////
+Now that we have a score for each post based on the number of votes, let's display a list of the best posts. To do so, we'll see how to manage two separate subscriptions against the post collection, and make our `postsList` template a bit more general.
 
-////
+To start off, we'll want to have *two* subscriptions, one for each sort order. The trick here is that both subscriptions will subscribe to the *same* `posts` publication, only with different arguments!
 
-////
+We'll also create two new routes called `newPosts` and `bestPosts`, accessible at the URLs `/new` and `/best` respectively (along with `/new/5` and `/best/5` for our pagination, of course).
 
-////
+To do this, we'll *extend* our `PostsListController` into two distinct `NewPostsListController` and `BestPostsListController` controllers. This will let us re-use the exact same route options for both the `home` and `newPosts` routes, by giving us a single `NewPostsListController` to inherit from. And additionally, it's just a nice illustration of how flexible Iron Router can be. 
 
 ~~~js
 PostsListController = RouteController.extend({
@@ -397,7 +400,7 @@ PostsListController = RouteController.extend({
     return Posts.find({}, this.findOptions());
   },
   data: function() {
-    var hasMore = this.posts().fetch().length === this.limit();
+    var hasMore = this.posts().count() === this.limit();
     return {
       posts: this.posts(),
       nextPath: hasMore ? this.nextPath() : null
@@ -438,13 +441,23 @@ Router.map(function() {
 });
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "8,16,21~34,36~49" %>
+<%= highlight "8,20,25~37,40~53" %>
 
-////
+Note that now that we have more than one route, we're taking the `nextPath` logic out of `PostsListController` and into `NewPostsListController` and `BestPostsListController`, since the path will be different in either case. 
 
-////
+Additionally, when we sort by `votes`, we have a secondary sort by submitted timestamp to ensure that the ordering is correct.
 
-////
+With our new controllers in place, we can now safely get rid of the previous `postsList` route. Just delete the following code:
+
+```
+ this.route('postsList', {
+  path: '/:postsLimit?',
+  controller: PostsListController
+ })
+```
+<%= caption "lib/router.js" %>
+
+We'll also add links in the header:
 
 ~~~html
 <template name="header">
@@ -474,7 +487,7 @@ Router.map(function() {
           {{/if}}
         </ul>
         <ul class="nav pull-right">
-          <li>{{loginButtons}}</li>
+          <li>{{> loginButtons}}</li>
         </ul>
       </div>
     </div>
@@ -482,9 +495,26 @@ Router.map(function() {
 </template>
 ~~~
 <%= caption "client/views/include/header.html" %>
-<%= highlight "9, 15~21" %>
+<%= highlight "9, 12~17" %>
 
-////
+We also need to update our post deleting event handler:
+
+~~~html
+  'click .delete': function(e) {
+    e.preventDefault();
+    
+    if (confirm("Delete this post?")) {
+      var currentPostId = this._id;
+      Posts.remove(currentPostId);
+      Router.go('home');
+    }
+  }
+~~~
+<%= caption "client/views/posts_edit.js" %>
+<%= highlight "7" %>
+
+
+With all this done, we now gain a best posts list:
 
 <%= screenshot "13-4", "Ranking by points" %>
 
@@ -492,9 +522,9 @@ Router.map(function() {
 
 ### A Better Header
 
-////
+Now that we have two post list pages, it can be hard to know just which list you're currently viewing. So let's revisit our header to make it more obvious. We'll create a `header.js` manager and create a helper that uses the current path and one or more named routes to set an active class on our navigation items:
 
-////
+The reason why we want to support multiple named routes is that both our `home` and `newPosts` routes (which correspond to the `/` and `/new` URLs respectively) bring up the same template. Meaning that our `activeRouteClass` should be smart enough to make the `<li>` tag active in both cases. 
 
 ~~~html
 <template name="header">
@@ -524,7 +554,7 @@ Router.map(function() {
           {{/if}}
         </ul>
         <ul class="nav pull-right">
-          <li>{{loginButtons}}</li>
+          <li>{{> loginButtons}}</li>
         </ul>
       </div>
     </div>
@@ -541,7 +571,7 @@ Template.header.helpers({
     args.pop();
     
     var active = _.any(args, function(name) {
-      return Router.current().route.name === name
+      return Router.current() && Router.current().route.name === name
     });
     
     return active && 'active';
@@ -556,18 +586,18 @@ Template.header.helpers({
 
 ### Helper Arguments
 
-////
+We haven't used that specific pattern up to now, but just like any other Handlebars tags, template helper tags can take arguments. 
 
-////
+And while you can of course pass specific named arguments to your function, you can also pass an unspecified number of anonymous parameters and retrieve them by calling the `arguments` object inside a function. 
 
-////
+In this last case, you will probably want to convert the `arguments` object to a regular JavaScript array and then call `pop()` on it to get rid of the hash added at the end by Handlebars.
 
 <% end %>
 
-////
+For each navigation item, the `activeRouteClass` helper takes a list of route names, and then uses Underscore's `any()` helper to see if any of the routes pass the test (i.e. their corresponding URL being equal to the current path). 
 
-////
+If any of the routes do match up with the current path, `any()` will return `true`. Finally, we're taking advantage of the `boolean && string` JavaScript pattern where `false && myString` returns `false`, but `true && myString` returns `myString`. 
 
 <%= commit "13-6", "Added active classes to the header." %>
 
-////
+Now that users can vote on posts in real-time, you will see items jumping up and down the homepage as their ranking change. but wouldn't it be nice if there was a way to smooth out all this with a few well-timed animations?
