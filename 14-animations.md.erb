@@ -3,64 +3,79 @@ title: Animations
 slug: animations
 date: 0014/01/01
 number: 14
+points: 10
+photoUrl: http://www.flickr.com/photos/ikewinski/8377615133/
+photoAuthor: Mike Lewinski
 contents: See what happens behind the scenes when Meteor swaps two DOM elements.|Learn how to animate the reordering of posts.|Learn how to animate the insertion of new posts.
 paragraphs: 58
 ---
 
-////
+We now have real-time voting, scoring, and ranking. However, this leads to a jarring, erratic user experience as posts jump around on the homepage. We'll use animations to smooth this over.
 
 ### Meteor & the DOM
 
-////
+Before we can start the fun part (making things move around), we need to understand how Meteor interacts with the DOM (Document Object Model -- the collection of HTML elements that make up a page's contents).
 
-////
+The crucial point to keep in mind is that elements in the DOM cannot really be “moved”; however, they can be deleted and created (note that this is a limitation of the DOM itself, not of Meteor). So to give the illusion of elements A and B switching place, Meteor will actually delete element B and insert a brand new copy (B') before element A. 
 
-////
+This makes animation a little tricky, as we can't just animate B to move it to a new position, because B will be gone as soon as Meteor re-renders the page (which happens instantly thanks to reactivity). But don't worry, we'll find a way. 
 
-////
+### The Soviet Runner
 
-1. ////
-2. ////
-3. ////
-4. ////
-5. ////
-6. ////
+The year was 1980, at the height of the Cold War. The Olympics were being held in Moscow, and the Soviets were determined to win the 100 meters dash at any cost. So a group of brilliant Soviet scientists equipped one of their athletes with a teleporter, and as soon as the gunshot was heard the runner was instantly moved to the finish line. 
 
-////
+Thankfully, race officials noticed the infraction immediately, and the athlete had no choice but to teleport back to the starting blocks, before being allowed to participate in the race by running like everybody else. 
 
-<%= diagram "animation_diagram", "Swtiching two posts", "pull-center" %>
+My historical sources aren't that reliable, so you should take that story with a grain of salt. But do try and keep the "Soviet runner with a teleporter" analogy in mind as we go through this chapter.
 
-////
+### Breaking It Down
 
-////
+When Meteor receives an update and reactively modifies the DOM, our post will be instantly teleported to its final position, just like the soviet runner. But whether at the Olympics or in our app, we can't just have stuff teleporting around. So we’ll teleport the element back to the “starting blocks” and make it “run” (in other words, animate it) back to the finish line.
 
-////
+So to switch posts A and B (positioned in positions p1 and p2, respectively), we would go through the following steps:
+
+1. Delete B
+2. Create B' before A in the DOM
+3. Teleport B' to p2
+4. Teleport A to p1
+5. Animate A to p2
+6. Animate B' to p1
+
+The following diagram explains these steps in more detail:
+
+<%= diagram "animation_diagram", "Switching two posts", "pull-center" %>
+
+Again, in steps 3 and 4 we're not *animating* A and B' to their positions but “teleporting” them instantly. Since this is instantaneous, it will give the illusion that B was never deleted, and properly position both elements to be animated back to their new position.
+
+Thankfully, Meteor takes care of steps 1 & 2 for us, so we only need to worry about steps 3 through 6. 
+
+Moreover, in steps 5 and 6 all we're doing is moving the elements to their proper spot. So the only part we really need to worry about is steps 3 and 4, i.e. sending the elements to the animation's starting point. 
 
 ### Proper Timing
 
-////
+Up to now we've talked about *how* to animate our posts but not *when* to animate them. 
 
-////
+For steps 3 and 4, the answer will be whenever a post's `_rank` property (on which our ordering depends) changes.
 
-////
+Steps 5 and 6 are a bit trickier. Think of it this way: if you told a perfectly logical android to run north for 5 minutes, and then once that's done run south for 5 minutes, it would probably deduce that since it will end up in the same place, it might as well save its energy and not run at all. 
 
-////
+So if you want to ensure that your android runs during the entire 10 minutes, you have to *wait* until it's ran the first 5 minutes, and *then* tell it to come back.
 
-////
+The browser works in a similar way: if we just gave it both instructions simultaneously, the new coordinates would simply replace the old ones and nothing would happen. In other words, the browser needs to register the position changes as separate points in time, otherwise it won't be able to animate them. 
 
-////
+Meteor doesn't provide a built-in callback for this, but we can fake it using `Meteor.setTimeout()`, which simply takes a function and defers its execution by a few milliseconds. 
 
 ### CSS Positioning
 
-////
+To animate the posts being reordered around the page, we'll have to venture into CSS territory. A quick review of CSS positioning might be in order. 
 
-////
+Elements on a page use **static** positioning by default. Statically positioned elements just fit within the flow of the page, and their coordinates on the screen cannot be changed or animated. 
 
-////
+**Relative** positioning on the other hand means that the element also fits in the flow of the page, but can be positioned *relative to its original position*. 
 
-////
+**Absolute** positioning goes one step further and lets you give  the element specific x/y coordinates relative to the **document** or **the first absolute or relative-positioned parent element**. 
 
-////
+We'll use relative positioning to animate our posts. We've already taken care of the CSS for you, but if you needed to do it yourself all you would do is add this code to your stylesheet:
 
 ~~~css
 .post{
@@ -70,41 +85,35 @@ paragraphs: 58
 ~~~
 <%= caption "client/stylesheets/style.css" %>
 
-////
+This makes steps 5 and 6 quite easy: all we need to do is reset `top` to `0px` (its default value) and our posts will slide back to their "normal" position. 
 
-////
+So basically, our only challenge is figuring where to animate them *from* (steps 3 and 4) relative to their new position. In other words, how much to offset them. But that's not very hard either: the correct offset is simply a post's previous position minus its new one. 
 
 <% note do %>
 
 ### Position:absolute
 
-////
+We could also use `position:absolute` with a relative parent to position our elements. But a big downside of absolutely positioned elements is that they're completely removed from the flow of the page, causing their parent container to collapse as if it were empty. 
 
-////
+This in turns means we'd need to artificially set the height of the container via JavaScript, instead of leaving the browser reflow elements naturally. Consequently, whenever possible it's best to stick with relative positioning. 
 
 <% end %>
 
 ### Total Recall
 
-////
+We do have one more problem though. While element A persists in the DOM and can thus "remember" its previous position, element B experiences reincarnation and comes back to life as B' with its memory wiped clean. 
 
-////
-
-> //// 
-
-////
-
-////
+So what we'll do is find out a post's current position in the page, and then store that position in a **local collection**. A local collection works just like a regular Meteor collection, excepts that it *only* lives in the browser's memory (i.e. not on the server). This way, even when a post is deleted and recreated, we'll still be able to know where we're supposed to animate it from. 
 
 ### Ranking Posts
 
-////
+We've been talking about posts rank, but this "rank" does not actually exist as a post property, since it's just a consequence of the order in which posts are listed in our collection. If we want to be able to animate posts according to their rank, we'll have to somehow conjure up this property out of thin air. 
 
-////
+Note that we can't put this `rank` property in the database itself, since rank is a relative property that depends on how you sort posts (i.e. a post can be ranked first when sorting by date, but third when sorting by points).
 
-////
+We would ideally put that property in our `newPosts` and `topPosts` collections, but Meteor doesn't offer a convenient mechanism to do this yet. 
 
-////
+So instead, we'll insert `rank` at the last possible step, the `postList` template manager:
 
 ~~~js
 Template.postsList.helpers({
@@ -120,9 +129,9 @@ Template.postsList.helpers({
 <%= caption "/client/views/posts/posts_list.js" %>
 <%= highlight "2~8" %>
 
-////
+Instead of simply returning the `Posts.find({}, {sort: {submitted: -1}, limit: postsHandle.limit()})` cursor like our previous `posts` helper, `postsWithRank` takes the cursor and adds the `_rank` property to each of its documents. 
 
-////
+Don't forget to update the `postsList` template as well:
 
 ~~~html
 <template name="postsList">
@@ -145,126 +154,168 @@ Template.postsList.helpers({
 
 ### Be Kind, Rewind
 
-////
+Meteor is one of the most forward-thinking and cutting-edge web frameworks around. But one of its features feels like a throwback to the days of VCRs and video cassette recording, namely the `rewind()` function. 
 
-////
+Whenever you use a cursor with `forEach()`, `map()`, or `fetch()`, you'll need to rewind the cursor afterwards before it's ready to be used again. 
 
-////
+So in some cases, it's better to be on the safe side and `rewind()` the cursor preventively rather than risk a bug. 
 
 <% end %>
 
-### Putting it together
+### Putting It Together
 
-////
+Since our animation will affect our DOM element's CSS attributes and classes, we'll add a dynamic `{{attributes}}` helper to the `postItem` template:
+
+```html
+<template name="postItem">
+  <div class="post" {{attributes}}>
+
+  //..
+
+</template>
+```
+<%= caption "/client/views/posts/post_item.html" %>
+<%= highlight "2" %>
+
+By using the `{{attributes}}` helper in this fashion, we also unlock a hidden feature of Spacebars: any property of the returned `attributes` object will get mapped to the DOM element's HTML attributes (such as `class`, `style`, and so on).
+
+Let's put everything together by creating the `attributes` helper:
 
 ~~~js
+var POST_HEIGHT = 80;
+var Positions = new Meteor.Collection(null);
+
 Template.postItem.helpers({
-  //...
-});
 
-Template.postItem.rendered = function(){
-  // animate post from previous position to new position
-  var instance = this;
-  var rank = instance.data._rank;
-  var $this = $(this.firstNode);
-  var postHeight = 80;
-  var newPosition = rank * postHeight;
- 
-  // if element has a currentPosition (i.e. it's not the first ever render)
-  if (typeof(instance.currentPosition) !== 'undefined') {
-    var previousPosition = instance.currentPosition;
-    // calculate difference between old position and new position and send element there
-    var delta = previousPosition - newPosition;
-    $this.css("top", delta + "px");
+  //..
+
+  attributes: function() {
+    var post = _.extend({}, Positions.findOne({postId: this._id}), this);
+    var newPosition = post._rank * POST_HEIGHT;
+    var attributes = {};
+    
+    if (! _.isUndefined(post.position)) {
+      var offset = post.position - newPosition;      
+      attributes.style = "top: " + offset + "px";
+      if (offset === 0)
+        attributes.class = "post animate"
+    }
+    
+    Meteor.setTimeout(function() {
+      Positions.upsert({postId: post._id}, {$set: {position: newPosition}})
+    });
+    
+    return attributes;
   }
-  
-  // let it draw in the old position, then..
-  Meteor.defer(function() {
-    instance.currentPosition = newPosition;
-    // bring element back to its new original position
-    $this.css("top",  "0px");
-  }); 
-};
-
-Template.postItem.events({
-  //...
 });
+
+//..
 ~~~
 <%= caption "/client/views/posts/post_item.js" %>
-<%= highlight "5~27" %>
+<%= highlight "1~2, 8~25" %>
+
+At the very top of our document, we're setting the height of each DOM element, in other words our `.post` divs. This presents the obvious downside that any change to this height (for example, a post title wrapping on two lines) will break our animation logic. But for the sake of keeping things simple, we'll assume that every post will be exactly 80 pixels high for now. 
+
+Next, we're declaring a local collection named `Positions`. Note that passing `null` as an argument lets Meteor know that this is a local (in other words, client-only) collection.
+
+We're now ready to build our `attributes` helper. 
+
+<% note do %>
+
+### Running Schedule
+
+It can often be hard to figure out just when a piece of reactive code will run. So let's take a deeper look at the  `attributes` helper.
+
+Like every helper, it will run once when the template is first rendered. Because of its dependency on the `_rank` property, it will also re-run every time a post's ranking changes. And finally, its dependency on the `Positions` collection also means it will re-run whenever the item in question is modified. 
+
+This means that the helper might run two or three times in a row. This might seem wasteful at first, but it's just the way reactivity works. Once you get used to it, it will just become another way of thinking about code. 
+
+<% end %>
+
+### The Attributes Helper
+
+First, we'll look up our post's position in the `Positions` collection and extend `this` (which in this helper corresponds to the current post) with the result of our query. We then use the `_rank` property to figure out the DOM element's new position relative to the top of the page.
+
+We must now manage two separate cases: either the helper is running because the template is being rendered (A), or it's running reactively because a property changed (B). 
+
+We only want to animate the element in case B, which is why we make sure that `post.position` is defined (we'll see *how* it's defined shortly).
+
+What's more, case B includes two sub-cases, B1 and B2: either we're *teleporting* our DOM element back to the “starting blocks” (its previous position), or we're *animating* it from its previous position to its new one. 
+
+This is where the `offset` variable comes in. Since we're using *relative* positioning, we'll want to figure out where to send the element *relative* to its current position. This means subtracting the new position from the previous one. 
+
+To figure out whether we're in case B1 or B2, we can simply look at `offset`: if `offset` is different than 0, it means we're *moving* the element *away* from its origin. On the other hand if `offset` is equal to 0, it means we're *animating* the element *back* to its origin coordinate, and we can add the class `animate` to the element to make sure it transitions slowly. 
+
+### Timing Out
+
+These three situations (A, B1, and B2) are all triggered reactively when certain properties change. In this case, the `setTimeout` function triggers the reevaluation of the reactive context by modifying the `Positions` collection. 
+
+So when a user first loads the page, the whole reactivity flow goes something like this:
+
+- The `attributes` helper runs for the first time.
+- `post.position` is not defined **(A)**.
+- `setTimeout` runs, defining `post.position`.
+- The `attributes` helper re-runs reactively.
+- There has been no movement, so `offset` goes from 0 to 0 (no visible animation) **(B2)**.
+
+And here's what happens when an upvote is detected:
+
+- `_rank` is modified, triggering a reevaluation of the `attributes` helper.
+- `post.position` is defined **(B)**.
+- `offset` is not equal to 0, so there is no animation **(B1)**
+- `setTimeout` runs, redefining `post.position`.
+- The `attributes` helper re-runs reactively.
+- `offset` goes back to 0 (with animation) **(B2)**.
+
+Now open your site and start upvoting. You should now see posts gently moving up and down with ballet-like grace!
 
 <%= commit "14-1", "Added post reordering animation." %>
 
-////
-
-////
-
-////
-
 ### Animating New Posts
 
-////
-
-////
-
-1. ////
-2. ////
-
-////
-
-////
+Our posts are now reordering properly, but we don't really have a "new post" animation yet. Instead of having new posts simply pop up at the top of our list, let's fade them in. 
 
 ~~~js
-Template.postItem.helpers({
-  //...
-});
+//..
 
-Template.postItem.rendered = function(){
-  // animate post from previous position to new position
-  var instance = this;
-  var rank = instance.data._rank;
-  var $this = $(this.firstNode);
-  var postHeight = 80;
-  var newPosition = rank * postHeight;
+attributes: function() {
+  var post = _.extend({}, Positions.findOne({postId: this._id}), this);
+  var newPosition = post._rank * POST_HEIGHT;
+  var attributes = {};
   
-  // if element has a currentPosition (i.e. it's not the first ever render)
-  if (typeof(instance.currentPosition) !== 'undefined') {
-    var previousPosition = instance.currentPosition;
-    // calculate difference between old position and new position and send element there
-    var delta = previousPosition - newPosition;
-    $this.css("top", delta + "px");
+  if (_.isUndefined(post.position)) {
+    attributes.class = 'post invisible';
   } else {
-    // it's the first ever render, so hide element
-    $this.addClass("invisible");
+    var delta = post.position - newPosition;      
+    attributes.style = "top: " + delta + "px";
+    if (delta === 0)
+      attributes.class = "post animate"
   }
   
-  // let it draw in the old position, then..
-  Meteor.defer(function() {
-    instance.currentPosition = newPosition;
-    // bring element back to its new original position
-    $this.css("top",  "0px").removeClass("invisible");
-  }); 
-};
+  Meteor.setTimeout(function() {
+    Positions.upsert({postId: post._id}, {$set: {position: newPosition}})
+  });
+  
+  return attributes;
+}
 
-Template.postItem.events({
-  //...
-});
+//..
 ~~~
 <%= caption "/client/views/posts/post_item.js" %>
-<%= highlight "19~22,28" %>
+<%= highlight "8~10" %>
+
+What we're doing here is isolating case **(A)** and adding the `invisible` CSS class to the element. When the helper next re-runs reactively and the element gets the `animate` class instead, the difference in opacity will be animated and fade the element in. 
 
 <%= commit "14-2", "Fade items in when they are drawn." %>
-
-////
 
 <% note do %>
 
 ### CSS & JavaScript
 
-////
+You might have noticed that we're using an `.invisible` CSS class to trigger the animation instead of animating the CSS `opacity` property directly like we did for `top`. This is because for `top`, we needed to animate the property to a specific value that depended on the instance data. 
 
-////
+On the other hand, here we only want to show and hide an element independently of its data. Since it's a good idea to keep your CSS out of your JavaScript as much as possible, we'll only add and remove the class here, and specify the details of the animation over in our stylesheet. 
 
 <% end %>
 
-////
+We should finally have the animation behavior we wanted. Load up your app and give it a try! And you can also play around with the `.post.animated` classes to see if you can come up with other transitions. Hint: [CSS easing functions](http://matthewlein.com/ceaser/) are a good place to start!
