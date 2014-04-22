@@ -14,9 +14,15 @@ We now have real-time voting, scoring, and ranking. However, this leads to a jar
 
 ### Meteor & the DOM
 
+Прежде, чем приступить к  самой веселой части (двигать все вокруг), нам необходимо понять, как Meteor взаимодействует с DOM (Document Object Model - набор элементов HTML, представлящие содержимое страниц).
+
 Before we can start the fun part (making things move around), we need to understand how Meteor interacts with the DOM (Document Object Model -- the collection of HTML elements that make up a page's contents).
 
+Важный момент, который следует усвоить, заключается в том, что элементы DOM на самом деле не могут быть перемещены; однако, их можно удалять и создавать (запомните, что это ограничение DOM, а не Meteor). И чтобы создать иллюзию перемены элементов A и B местами, Meteor будет удалять элемент B и создавать его новую копию перед элементом A.
+
 The crucial point to keep in mind is that elements in the DOM cannot really be “moved”; however, they can be deleted and created (note that this is a limitation of the DOM itself, not of Meteor). So to give the illusion of elements A and B switching place, Meteor will actually delete element B and insert a brand new copy (B') before element A. 
+
+
 
 This makes animation a little tricky, as we can't just animate B to move it to a new position, because B will be gone as soon as Meteor re-renders the page (which happens instantly thanks to reactivity). But don't worry, we'll find a way. 
 
