@@ -3,18 +3,15 @@ title: Animations
 slug: animations
 date: 0014/01/01
 number: 14
-points: 10
-photoUrl: http://www.flickr.com/photos/ikewinski/8377615133/
-photoAuthor: Mike Lewinski
 contents: See what happens behind the scenes when Meteor swaps two DOM elements.|Learn how to animate the reordering of posts.|Learn how to animate the insertion of new posts.
 paragraphs: 58
 ---
 
 We now have real-time voting, scoring, and ranking. However, this leads to a jarring, erratic user experience as posts jump around on the homepage. We'll use animations to smooth this over.
 
-### Meteor & the DOM
+### Meteor и DOM (Meteor & the DOM)
 
-Прежде, чем приступить к  самой веселой части (двигать все вокруг), нам необходимо понять, как Meteor взаимодействует с DOM (Document Object Model - набор элементов HTML, представлящие содержимое страниц).
+Прежде, чем приступить к  самой веселой части (двигать все вокруг), нам необходимо понять, как Meteor взаимодействует с DOM (Document Object Model - набор элементов HTML, представляющие содержимое страниц).
 
 Before we can start the fun part (making things move around), we need to understand how Meteor interacts with the DOM (Document Object Model -- the collection of HTML elements that make up a page's contents).
 
@@ -22,23 +19,40 @@ Before we can start the fun part (making things move around), we need to underst
 
 The crucial point to keep in mind is that elements in the DOM cannot really be “moved”; however, they can be deleted and created (note that this is a limitation of the DOM itself, not of Meteor). So to give the illusion of elements A and B switching place, Meteor will actually delete element B and insert a brand new copy (B') before element A. 
 
-
+Это делает анимацию немного хитрым делом. Мы не можем просто двигать B в его новую позицию, так как B будет удален сразу же, как только Meteor обновит страницу (которая обновиться мгновенно, спасибо реактивности). Но не волнуйтесь, мы найдем решение.
 
 This makes animation a little tricky, as we can't just animate B to move it to a new position, because B will be gone as soon as Meteor re-renders the page (which happens instantly thanks to reactivity). But don't worry, we'll find a way. 
 
-### The Soviet Runner
+### Советский бегун (The Soviet Runner)
+
+Был 1980 год, самый разгар Холодной Войны. Олимпийские игры проходили в Москве, и Советский союз был полон решимости победить любой ценой в забеге на 100 метров. Для этого группа лучших советских ученых экипировала одного из своих бегунов телепортером, чтобы мгновенно переместить его к финишной черте сразу после выстрела.
 
 The year was 1980, at the height of the Cold War. The Olympics were being held in Moscow, and the Soviets were determined to win the 100 meters dash at any cost. So a group of brilliant Soviet scientists equipped one of their athletes with a teleporter, and as soon as the gunshot was heard the runner was instantly moved to the finish line. 
 
+К счастью, судьи сразу заметили нарушение, и атлету пришлось телепортироваться обратно на старт, чтобы быть допущенным к участию в гонке, как все остальные.
+
 Thankfully, race officials noticed the infraction immediately, and the athlete had no choice but to teleport back to the starting blocks, before being allowed to participate in the race by running like everybody else. 
+
+Мои исторические источники не надежны, поэтому вам не стоит принимать эту историю за чистую монету. Но попробуйте держать в уме аналогию про "советского бегуна с телепортером", пока читаете эту главу.
 
 My historical sources aren't that reliable, so you should take that story with a grain of salt. But do try and keep the "Soviet runner with a teleporter" analogy in mind as we go through this chapter.
 
 ### Breaking It Down
 
+Когда Meteor получит обновление и реактивно изменит DOM, наш пост мгновенно перенесется в его финальное положение, как советский бегун. Но ни на Олимпийских играх, ни в нашем приложении мы не можем просто телепортировать все подряд. Поэтому, мы телепортируем элемент назад к стартовой позиции и и будем передвигать его (другими словами, анимировать) к финишной черте.
+
 When Meteor receives an update and reactively modifies the DOM, our post will be instantly teleported to its final position, just like the soviet runner. But whether at the Olympics or in our app, we can't just have stuff teleporting around. So we’ll teleport the element back to the “starting blocks” and make it “run” (in other words, animate it) back to the finish line.
 
+Итак, чтобы поменять посты A и B (расположенные в позициях p1 и p2 соответственно), мы совершим следующие действия:
+
 So to switch posts A and B (positioned in positions p1 and p2, respectively), we would go through the following steps:
+
+1. Удалим B
+2. Создадим B' перед A, в DOM
+3. Телепортируем B' в p2
+4. Телепортируем A в p1
+5. Анимируем A в p2
+6. Анимируем B' в p1
 
 1. Delete B
 2. Create B' before A in the DOM
@@ -47,13 +61,21 @@ So to switch posts A and B (positioned in positions p1 and p2, respectively), we
 5. Animate A to p2
 6. Animate B' to p1
 
+Следующая диаграмма объясняет эти шаги детально:
+
 The following diagram explains these steps in more detail:
 
 <%= diagram "animation_diagram", "Switching two posts", "pull-center" %>
 
+Повторюсь, в шагах 3 и 4 мы не "анимируем" A и B' в их позиции, а мгновенно их "тепепортируем". Так как это мгновенно, кажется, что они никогда не были удалены, и правильные положения обоих элементов анимируются обратно к их новым значениям.
+
 Again, in steps 3 and 4 we're not *animating* A and B' to their positions but “teleporting” them instantly. Since this is instantaneous, it will give the illusion that B was never deleted, and properly position both elements to be animated back to their new position.
 
+К счастью, Meteor берет на себя заботу о двух первых шагах, так что нам нужно подумать только о шагах с 3 по 6.
+
 Thankfully, Meteor takes care of steps 1 & 2 for us, so we only need to worry about steps 3 through 6. 
+
+Более того, в шагах 5 и 6 все, что нам нужно сделать - передвинуть элементы в их должное положение. Таким образом, в действительности, нам нужно подумать только о 3 и 4 шагах, т.е., отправить элементы в их начальную позицию анимации.
 
 Moreover, in steps 5 and 6 all we're doing is moving the elements to their proper spot. So the only part we really need to worry about is steps 3 and 4, i.e. sending the elements to the animation's starting point. 
 
