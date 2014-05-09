@@ -81,15 +81,27 @@ Moreover, in steps 5 and 6 all we're doing is moving the elements to their prope
 
 ### Proper Timing
 
+До этого момента мы говорили о том, *как* анимировать наши посты, но не *когда* анимировать их.
+
 Up to now we've talked about *how* to animate our posts but not *when* to animate them. 
+
+Для шагов 3 и 4 ответ будет всякий раз, когда изменяется свойство поста '_rank' (/**todo*/).
 
 For steps 3 and 4, the answer will be whenever a post's `_rank` property (on which our ordering depends) changes.
 
+Шаги 5 и 6 немного хитрее. Думайте об этом так: если вы скажете абсолютно логичному андроиду бежать на сечер 5 минут, а после - бежать 5 минут на на юг, он возможно подумает, что если он должен закончить там в том же самом месте, будет лучше сохранить энергию и не бежать вовсе.
+
 Steps 5 and 6 are a bit trickier. Think of it this way: if you told a perfectly logical android to run north for 5 minutes, and then once that's done run south for 5 minutes, it would probably deduce that since it will end up in the same place, it might as well save its energy and not run at all. 
+
+И если вы хотите убедится, что ваш андроид бежал 10 минут, вы должны *подождать*, пока он не пробежит первые 5 минут, и *затем* сказать ему бежать обратно.
 
 So if you want to ensure that your android runs during the entire 10 minutes, you have to *wait* until it's ran the first 5 minutes, and *then* tell it to come back.
 
+Браузер работает подобным образом: если мы просто дадим обе инструкции одновременно, то старые координаты будут просто переписаны новыми и ничего не случится. Другими словами, браузер должен регистрировать изменение позиций как отдельные точки во времени, иначе он не сможет их анимировать.
+
 The browser works in a similar way: if we just gave it both instructions simultaneously, the new coordinates would simply replace the old ones and nothing would happen. In other words, the browser needs to register the position changes as separate points in time, otherwise it won't be able to animate them. 
+
+Meteor не предоставляет встроенного каллбека для этого случая, но мы можем имитировать его, используя `Meteor.setTimeout()`, который просто берет функцию и открадывает ее выполнение на несколько миллисекунд.
 
 Meteor doesn't provide a built-in callback for this, but we can fake it using `Meteor.setTimeout()`, which simply takes a function and defers its execution by a few milliseconds. 
 
@@ -97,11 +109,19 @@ Meteor doesn't provide a built-in callback for this, but we can fake it using `M
 
 To animate the posts being reordered around the page, we'll have to venture into CSS territory. A quick review of CSS positioning might be in order. 
 
+Элементы страницы по умолчанию используют **static** позиционирование. Статически размещенный элемент просто располагается в потоке на странице, и его экранные координаты не могуб быть изменены или анимированны.
+
 Elements on a page use **static** positioning by default. Statically positioned elements just fit within the flow of the page, and their coordinates on the screen cannot be changed or animated. 
+
+**Relative** позиционирование в свою очередь подразуменвает, что элемент тоже може находится в потоке на странице, но так же может быть расположен *относительно его оригинального положения*.
 
 **Relative** positioning on the other hand means that the element also fits in the flow of the page, but can be positioned *relative to its original position*. 
 
+**Absolute** позиционирование идет на шаг впереди и позволяет вам дать определенные координаты x/y относительно **document** или **первого абсолютно или относительно позиционированного элемента-родителя**.
+
 **Absolute** positioning goes one step further and lets you give  the element specific x/y coordinates relative to the **document** or **the first absolute or relative-positioned parent element**. 
+
+Мы будем использовать относительное позиционирование для анимации наших постов. Мы уже позаботились о CSS для вас, но если вам будет нужно сделать это самостоятельно, вам нужно только добавить этот код в таблицу стилей:
 
 We'll use relative positioning to animate our posts. We've already taken care of the CSS for you, but if you needed to do it yourself all you would do is add this code to your stylesheet:
 
@@ -113,7 +133,11 @@ We'll use relative positioning to animate our posts. We've already taken care of
 ~~~
 <%= caption "client/stylesheets/style.css" %>
 
+Это делает шаги 5 и 6 совсем простыми: вам нужно только сбросить `top` к `0px` (это его обычное значение) и наши посты поплывут обратно к их "нормальной" позиции. 
+
 This makes steps 5 and 6 quite easy: all we need to do is reset `top` to `0px` (its default value) and our posts will slide back to their "normal" position. 
+
+Проще говоря, наша задача - понять, где анимировать их *откуда* (шаги 3 и 4) относительно к их новой позиции. Другими словами, на сколько их сместить. //TODO
 
 So basically, our only challenge is figuring where to animate them *from* (steps 3 and 4) relative to their new position. In other words, how much to offset them. But that's not very hard either: the correct offset is simply a post's previous position minus its new one. 
 
