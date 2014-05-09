@@ -1,11 +1,19 @@
 In this file we'll be collecting all the common translations of frequently used phrases:
 
-Throughout the book, please use "Meteor", не MeteorJS и не метеор и тп.
+На протяжении всей книги, пожалуйста, используйте "Meteor", а не "MeteorJS" и не
+"метеор" и тп.
 
-| English  | Russian |
+| English  | Русский |
 | ------------- | ------------- |
-| packages  | модули  |
+| packages  | пакеты  |
 | Meteor app  | Meteor приложение  |
+| template helpers | методы шаблона |
 
 
-Такие понятия как push, commit, "template helper", "template managers", Handlebars, etc оставитьна английском.
+При первой встрече технического термина, такого как "Pagination", хорошо давать
+оригинал на том же месте. Достаточно это сделать первый раз, чтобы читатель,
+знакомый с английским термином, мог соединить концепт с переведенным словом.
+
+Имена собственные, такие как "Handlebars", "Iron Router" - оставить в
+оригинальном виде.
+
