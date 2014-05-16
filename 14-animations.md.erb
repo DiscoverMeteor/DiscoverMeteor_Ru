@@ -1,51 +1,35 @@
 ---
-title: Animations
+title: Анимации
 slug: animations
 date: 0014/01/01
 number: 14
-contents: See what happens behind the scenes when Meteor swaps two DOM elements.|Learn how to animate the reordering of posts.|Learn how to animate the insertion of new posts.
+contents: Узнаете что происходит за кулисами когда Meteor меняет местами два DOM элемента.|Научитесь анимировать реорганизацию постов.|Научитесь анимировать добавление новых постов.
 paragraphs: 58
 ---
 
-We now have real-time voting, scoring, and ranking. However, this leads to a jarring, erratic user experience as posts jump around on the homepage. We'll use animations to smooth this over.
+В нашем приложении уже есть голосование в реальном времени, голосование за посты и рейтинги лучших постов. Из-за такого обилия функционала наши посты прыгают по странице и это не производит хорошего впечатления на пользователей. В этой главе мы научимся добавлять анимации, чтобы сгладить все перемещения элементов.
 
-### Meteor и DOM (Meteor & the DOM)
+### Meteor и DOM
 
-Прежде, чем приступить к  самой веселой части (двигать все вокруг), нам необходимо понять, как Meteor взаимодействует с DOM (Document Object Model - набор элементов HTML, представляющие содержимое страниц).
+Прежде, чем приступить к самой веселой части (двигать элементы приложения вокруг), нам необходимо понять, как Meteor взаимодействует с DOM (Document Object Model - набор элементов HTML, представляющие содержимое страниц).
 
-Before we can start the fun part (making things move around), we need to understand how Meteor interacts with the DOM (Document Object Model -- the collection of HTML elements that make up a page's contents).
+Важный момент, который следует усвоить, заключается в том, что элементы DOM на самом деле не могут быть перемещены; однако их можно удалять и создавать (запомните, что это ограничение DOM, а не Meteor). И чтобы создать иллюзию перемены элементов A и B местами, Meteor будет удалять элемент B и создавать его новую копию перед элементом A.
 
-Важный момент, который следует усвоить, заключается в том, что элементы DOM на самом деле не могут быть перемещены; однако, их можно удалять и создавать (запомните, что это ограничение DOM, а не Meteor). И чтобы создать иллюзию перемены элементов A и B местами, Meteor будет удалять элемент B и создавать его новую копию перед элементом A.
+Из-за этого процесс анимации становится непростым. Мы не можем просто переместить элемент B в его новую позицию, так как B будет удален сразу же, как только Meteor обновит страницу (которая обновиться мгновенно, спасибо реактивности). Но не волнуйтесь, мы найдем решение.
 
-The crucial point to keep in mind is that elements in the DOM cannot really be “moved”; however, they can be deleted and created (note that this is a limitation of the DOM itself, not of Meteor). So to give the illusion of elements A and B switching place, Meteor will actually delete element B and insert a brand new copy (B') before element A. 
-
-Это делает анимацию немного хитрым делом. Мы не можем просто двигать B в его новую позицию, так как B будет удален сразу же, как только Meteor обновит страницу (которая обновиться мгновенно, спасибо реактивности). Но не волнуйтесь, мы найдем решение.
-
-This makes animation a little tricky, as we can't just animate B to move it to a new position, because B will be gone as soon as Meteor re-renders the page (which happens instantly thanks to reactivity). But don't worry, we'll find a way. 
-
-### Советский бегун (The Soviet Runner)
+### Советский бегун
 
 Был 1980 год, самый разгар Холодной Войны. Олимпийские игры проходили в Москве, и Советский союз был полон решимости победить любой ценой в забеге на 100 метров. Для этого группа лучших советских ученых экипировала одного из своих бегунов телепортером, чтобы мгновенно переместить его к финишной черте сразу после выстрела.
 
-The year was 1980, at the height of the Cold War. The Olympics were being held in Moscow, and the Soviets were determined to win the 100 meters dash at any cost. So a group of brilliant Soviet scientists equipped one of their athletes with a teleporter, and as soon as the gunshot was heard the runner was instantly moved to the finish line. 
-
 К счастью, судьи сразу заметили нарушение, и атлету пришлось телепортироваться обратно на старт, чтобы быть допущенным к участию в гонке, как все остальные.
 
-Thankfully, race officials noticed the infraction immediately, and the athlete had no choice but to teleport back to the starting blocks, before being allowed to participate in the race by running like everybody else. 
+Мои исторические источники ненадежны, поэтому вам не стоит принимать эту историю за чистую монету. Но попробуйте держать в уме аналогию про "советского бегуна с телепортером", пока читаете эту главу.
 
-Мои исторические источники не надежны, поэтому вам не стоит принимать эту историю за чистую монету. Но попробуйте держать в уме аналогию про "советского бегуна с телепортером", пока читаете эту главу.
+### Разбиваем процесс на кусочки
 
-My historical sources aren't that reliable, so you should take that story with a grain of salt. But do try and keep the "Soviet runner with a teleporter" analogy in mind as we go through this chapter.
-
-### Breaking It Down
-
-Когда Meteor получит обновление и реактивно изменит DOM, наш пост мгновенно перенесется в его финальное положение, как советский бегун. Но ни на Олимпийских играх, ни в нашем приложении мы не можем просто телепортировать все подряд. Поэтому, мы телепортируем элемент назад к стартовой позиции и и будем передвигать его (другими словами, анимировать) к финишной черте.
-
-When Meteor receives an update and reactively modifies the DOM, our post will be instantly teleported to its final position, just like the soviet runner. But whether at the Olympics or in our app, we can't just have stuff teleporting around. So we’ll teleport the element back to the “starting blocks” and make it “run” (in other words, animate it) back to the finish line.
+Когда Meteor получит обновление и реактивно изменит DOM, наш пост словно советский бегун мгновенно перенесется в его финальное положение. Но ни на Олимпийских играх, ни в нашем приложении мы не можем просто телепортировать все подряд. Поэтому, мы телепортируем элемент назад к стартовой позиции и будем двигать его (другими словами, анимировать) к финишной черте.
 
 Итак, чтобы поменять посты A и B (расположенные в позициях p1 и p2 соответственно), мы совершим следующие действия:
-
-So to switch posts A and B (positioned in positions p1 and p2, respectively), we would go through the following steps:
 
 1. Удалим B
 2. Создадим B' перед A, в DOM
@@ -54,76 +38,41 @@ So to switch posts A and B (positioned in positions p1 and p2, respectively), we
 5. Анимируем A в p2
 6. Анимируем B' в p1
 
-1. Delete B
-2. Create B' before A in the DOM
-3. Teleport B' to p2
-4. Teleport A to p1
-5. Animate A to p2
-6. Animate B' to p1
+Следующая диаграмма объясняет эти шаги в деталях:
 
-Следующая диаграмма объясняет эти шаги детально:
+<%= diagram "animation_diagram", "Меняем местами два поста", "pull-center" %>
 
-The following diagram explains these steps in more detail:
-
-<%= diagram "animation_diagram", "Switching two posts", "pull-center" %>
-
-Повторюсь, в шагах 3 и 4 мы не "анимируем" A и B' в их позиции, а мгновенно их "тепепортируем". Так как это мгновенно, кажется, что они никогда не были удалены, и правильные положения обоих элементов анимируются обратно к их новым значениям.
-
-Again, in steps 3 and 4 we're not *animating* A and B' to their positions but “teleporting” them instantly. Since this is instantaneous, it will give the illusion that B was never deleted, and properly position both elements to be animated back to their new position.
+Повторюсь, в шагах 3 и 4 мы не *анимируем* A и B' в их позиции, а мгновенно их “тепепортируем”. Так как это происходит мгновенно, пользователю может показаться что они никогда не были удалены, и правильные положения обоих элементов анимируются обратно к их новым значениям.
 
 К счастью, Meteor берет на себя заботу о двух первых шагах, так что нам нужно подумать только о шагах с 3 по 6.
 
-Thankfully, Meteor takes care of steps 1 & 2 for us, so we only need to worry about steps 3 through 6. 
+Более того, в шагах 5 и 6 все что нам нужно сделать это передвинуть элементы в их должное положение. Таким образом, в действительности, нам нужно подумать только о пунктах 3 и 4, т.е., отправить элементы в их начальную позицию анимации.
 
-Более того, в шагах 5 и 6 все, что нам нужно сделать - передвинуть элементы в их должное положение. Таким образом, в действительности, нам нужно подумать только о 3 и 4 шагах, т.е., отправить элементы в их начальную позицию анимации.
-
-Moreover, in steps 5 and 6 all we're doing is moving the elements to their proper spot. So the only part we really need to worry about is steps 3 and 4, i.e. sending the elements to the animation's starting point. 
-
-### Proper Timing
+### Правильный тайминг
 
 До этого момента мы говорили о том, *как* анимировать наши посты, но не *когда* анимировать их.
 
-Up to now we've talked about *how* to animate our posts but not *when* to animate them. 
+Для шагов 3 и 4 ответ будет следующий - всякий раз, когда изменяется свойство поста '_rank' (от которого и зависит позиция поста в списке).
 
-Для шагов 3 и 4 ответ будет всякий раз, когда изменяется свойство поста '_rank' (/**todo*/).
+Шаги 5 и 6 будут хитрее. Представьте следующую вещь: если вы сообщите абсолютно логичному андроиду бежать на север 5 минут, а затем бежать 5 минут на на юг, он скорее всего сообразит, что если он должен закончить пробежку на стартовом месте, будет лучше сохранить энергию и не бежать вовсе.
 
-For steps 3 and 4, the answer will be whenever a post's `_rank` property (on which our ordering depends) changes.
+И если вы хотите убедится, что ваш андроид бежал 10 минут, вы придется *подождать*, пока он не пробежит первые 5 минут, и *затем* сказать ему бежать обратно.
 
-Шаги 5 и 6 немного хитрее. Думайте об этом так: если вы скажете абсолютно логичному андроиду бежать на сечер 5 минут, а после - бежать 5 минут на на юг, он возможно подумает, что если он должен закончить там в том же самом месте, будет лучше сохранить энергию и не бежать вовсе.
+Браузер работает похожим образом: если мы просто дадим обе инструкции одновременно, то старые координаты будут просто переписаны новыми и ничего не случится. Другими словами, браузер должен регистрировать изменение позиций как отдельные точки во времени, иначе он не сможет их анимировать.
 
-Steps 5 and 6 are a bit trickier. Think of it this way: if you told a perfectly logical android to run north for 5 minutes, and then once that's done run south for 5 minutes, it would probably deduce that since it will end up in the same place, it might as well save its energy and not run at all. 
+Meteor не предоставляет встроенного коллбека для этого случая, но мы можем имитировать его, используя `Meteor.setTimeout()`, который просто берет функцию и откладывает ее выполнение на несколько миллисекунд.
 
-И если вы хотите убедится, что ваш андроид бежал 10 минут, вы должны *подождать*, пока он не пробежит первые 5 минут, и *затем* сказать ему бежать обратно.
+### Позиционирование элементов с помощью CSS
 
-So if you want to ensure that your android runs during the entire 10 minutes, you have to *wait* until it's ran the first 5 minutes, and *then* tell it to come back.
+Чтобы анимировать реорганизацию постов в списке, нам следует вторгнуться на территорию CSS. Давайте быстро повторим основные правила, как элементы позиционируются на странице с помощью CSS.
 
-Браузер работает подобным образом: если мы просто дадим обе инструкции одновременно, то старые координаты будут просто переписаны новыми и ничего не случится. Другими словами, браузер должен регистрировать изменение позиций как отдельные точки во времени, иначе он не сможет их анимировать.
+Элементы страницы по умолчанию используют **статичное** - **static** позиционирование. Статически размещенный элемент просто располагается в потоке на странице, и его экранные координаты не могут быть изменены или анимированны.
 
-The browser works in a similar way: if we just gave it both instructions simultaneously, the new coordinates would simply replace the old ones and nothing would happen. In other words, the browser needs to register the position changes as separate points in time, otherwise it won't be able to animate them. 
+**Relative** - **относительное** позиционирование в свою очередь подразумевает, что элемент позиционируется традиционным способом на странице, но может быть также сдвинут *относительно своего изначального положения*.
 
-Meteor не предоставляет встроенного каллбека для этого случая, но мы можем имитировать его, используя `Meteor.setTimeout()`, который просто берет функцию и открадывает ее выполнение на несколько миллисекунд.
+**Absolute** - **абсолютное** позиционирование делает еще один шаг вперед и позволяет вам задать конкретные координаты x/y относительно **корневого документа** или **первого абсолютно или относительно позиционированного элемента-родителя**.
 
-Meteor doesn't provide a built-in callback for this, but we can fake it using `Meteor.setTimeout()`, which simply takes a function and defers its execution by a few milliseconds. 
-
-### CSS Positioning
-
-To animate the posts being reordered around the page, we'll have to venture into CSS territory. A quick review of CSS positioning might be in order. 
-
-Элементы страницы по умолчанию используют **static** позиционирование. Статически размещенный элемент просто располагается в потоке на странице, и его экранные координаты не могуб быть изменены или анимированны.
-
-Elements on a page use **static** positioning by default. Statically positioned elements just fit within the flow of the page, and their coordinates on the screen cannot be changed or animated. 
-
-**Relative** позиционирование в свою очередь подразуменвает, что элемент тоже може находится в потоке на странице, но так же может быть расположен *относительно его оригинального положения*.
-
-**Relative** positioning on the other hand means that the element also fits in the flow of the page, but can be positioned *relative to its original position*. 
-
-**Absolute** позиционирование идет на шаг впереди и позволяет вам дать определенные координаты x/y относительно **document** или **первого абсолютно или относительно позиционированного элемента-родителя**.
-
-**Absolute** positioning goes one step further and lets you give  the element specific x/y coordinates relative to the **document** or **the first absolute or relative-positioned parent element**. 
-
-Мы будем использовать относительное позиционирование для анимации наших постов. Мы уже позаботились о CSS для вас, но если вам будет нужно сделать это самостоятельно, вам нужно только добавить этот код в таблицу стилей:
-
-We'll use relative positioning to animate our posts. We've already taken care of the CSS for you, but if you needed to do it yourself all you would do is add this code to your stylesheet:
+Мы будем использовать относительное позиционирование для анимации наших постов. Мы уже позаботились о CSS для вас, но если вам охота добавить стили самостоятельно, просто добавьте этот код в ваш CSS файл:
 
 ~~~css
 .post{
@@ -133,39 +82,35 @@ We'll use relative positioning to animate our posts. We've already taken care of
 ~~~
 <%= caption "client/stylesheets/style.css" %>
 
-Это делает шаги 5 и 6 совсем простыми: вам нужно только сбросить `top` к `0px` (это его обычное значение) и наши посты поплывут обратно к их "нормальной" позиции. 
+Это делает шаги 5 и 6 совсем простыми: вам нужно только сбросить значение `top` на `0px` (это его значение по-умолчанию), и наши посты плавно сдвинутся обратно к их "нормальной" позиции.
 
-This makes steps 5 and 6 quite easy: all we need to do is reset `top` to `0px` (its default value) and our posts will slide back to their "normal" position. 
-
-Проще говоря, наша задача - понять, где анимировать их *откуда* (шаги 3 и 4) относительно к их новой позиции. Другими словами, на сколько их сместить. //TODO
-
-So basically, our only challenge is figuring where to animate them *from* (steps 3 and 4) relative to their new position. In other words, how much to offset them. But that's not very hard either: the correct offset is simply a post's previous position minus its new one. 
+Другими словами наша задача понять, *откуда* анимировать посты (шаги 3 и 4). То есть, насколько пикселей нужно сдвинуть посты. Но это не так сложно - правильный сдвиг можно вычислить просто отняв координаты новой позиции поста от предыдущей.
 
 <% note do %>
 
 ### Position:absolute
 
-We could also use `position:absolute` with a relative parent to position our elements. But a big downside of absolutely positioned elements is that they're completely removed from the flow of the page, causing their parent container to collapse as if it were empty. 
+Мы могли бы использовать `position:absolute` вместе с относительным родительским элементом для позиционирования наших постов. Но у абсолютного позиционирования есть один большой минус - они совершенно выпадают из структуры страницы, заставляя родительский элемент вести себя так, словно он становится пустым.
 
-This in turns means we'd need to artificially set the height of the container via JavaScript, instead of leaving the browser reflow elements naturally. Consequently, whenever possible it's best to stick with relative positioning. 
+В свою очередь нам придется воспользоваться арсеналом JavaScript чтобы искуственно выставить размеры родительского контейнера - вместо того, чтобы дать браузеру возможность позиционировать элементы естественным образом. Так что лучше использовать относительное позиционирование.
 
 <% end %>
 
-### Total Recall
+### Вспомнить Все
 
-We do have one more problem though. While element A persists in the DOM and can thus "remember" its previous position, element B experiences reincarnation and comes back to life as B' with its memory wiped clean. 
+Есть еще одна загвоздка. В то время как элемент А остается в DOM и таким образом "помнит" свою предыдущую позицию, элемент B переживает реинкарнацию и возвращается к жизни как новый элемент B', с абсолютно стертой памятью.
 
-So what we'll do is find out a post's current position in the page, and then store that position in a **local collection**. A local collection works just like a regular Meteor collection, excepts that it *only* lives in the browser's memory (i.e. not on the server). This way, even when a post is deleted and recreated, we'll still be able to know where we're supposed to animate it from. 
+Чтобы решить эту задачу мы воспользуемся **локальной коллекцией**. В нее мы сохраним текущую позицию поста на странице. Локальная коллекция работает точно так же как и обычная коллекция Meteor, за исключением того что она остается *только* в памяти браузера (не отправляя данные на сервер). Таким образом, даже если пост удален и воссоздан заново, мы все еще сможем понять, с какого места на странице его надо было анимировать.
 
-### Ranking Posts
+### Рейтинг постов
 
-We've been talking about posts rank, but this "rank" does not actually exist as a post property, since it's just a consequence of the order in which posts are listed in our collection. If we want to be able to animate posts according to their rank, we'll have to somehow conjure up this property out of thin air. 
+Мы много говорили про рейтинг постов, но этот "рейтинг" не существует как отдельное свойство поста, а является всего лишь следствием того, в каком порядке посты сохранены в нашей коллекции. Если мы хотим анимировать посты согласно их рейтингу, нам надо наколдовать из воздуха это свойство.
 
-Note that we can't put this `rank` property in the database itself, since rank is a relative property that depends on how you sort posts (i.e. a post can be ranked first when sorting by date, but third when sorting by points).
+Обратите внимание что мы не можем просто добавить свойство `rank` в базу данных, так как рейтинг это относительное свойство, которое просто зависит от того, как мы сортируем посты (то есть, отдельно взятый пост может иметь первое место при сортировке по дате, но третье место при сортировке по очкам голосов).
 
-We would ideally put that property in our `newPosts` and `topPosts` collections, but Meteor doesn't offer a convenient mechanism to do this yet. 
+В идеале мы хотели бы добавить это свойство в коллекции `newPosts` и `topPosts`, но Meteor на данный момент не предлагает подходящего механизма для этого.
 
-So instead, we'll insert `rank` at the last possible step, the `postList` template manager:
+Вместо этого мы добавим свойство `rank` на самом последнем шаге, в менеджере шаблона `postList`:
 
 ~~~js
 Template.postsList.helpers({
@@ -181,9 +126,9 @@ Template.postsList.helpers({
 <%= caption "/client/views/posts/posts_list.js" %>
 <%= highlight "2~8" %>
 
-Instead of simply returning the `Posts.find({}, {sort: {submitted: -1}, limit: postsHandle.limit()})` cursor like our previous `posts` helper, `postsWithRank` takes the cursor and adds the `_rank` property to each of its documents. 
+Вместо того чтобы просто вернуть курсор `Posts.find({}, {sort: {submitted: -1}, limit: postsHandle.limit()})` как наш предыдущий хелпер `posts`, `postsWithRank` принимает курсор и добавляет свойство `_rank` к каждому из его документов.
 
-Don't forget to update the `postsList` template as well:
+Не забудьте обновить шаблон `postsList`:
 
 ~~~html
 <template name="postsList">
@@ -191,7 +136,7 @@ Don't forget to update the `postsList` template as well:
     {{#each postsWithRank}}
       {{> postItem}}
     {{/each}}
-    
+
     {{#if nextPath}}
       <a class="load-more" href="{{nextPath}}">Load more</a>
     {{/if}}
@@ -204,19 +149,19 @@ Don't forget to update the `postsList` template as well:
 
 <% note do %>
 
-### Be Kind, Rewind
+### Пожалуйста, перемотайте
 
-Meteor is one of the most forward-thinking and cutting-edge web frameworks around. But one of its features feels like a throwback to the days of VCRs and video cassette recording, namely the `rewind()` function. 
+Meteor является одной из самых передовых сред разработки веб приложений. Но одна из его особенностей как будто пришла со времен видеомагнитофонов и записи на видеокассеты. Мы говорим о функции `rewind()`.
 
-Whenever you use a cursor with `forEach()`, `map()`, or `fetch()`, you'll need to rewind the cursor afterwards before it's ready to be used again. 
+Каждый раз когда вы вызываете функции `forEach()`, `map()`, или `fetch()` для курсора, вам нужно перемотать курсор на место перед тем, как им можно воспользоваться снова.
 
-So in some cases, it's better to be on the safe side and `rewind()` the cursor preventively rather than risk a bug. 
+Поэтому, в некоторых случаях курсор стоит перематывать на всяких случай каждый раз, и не рисковать возможным багом.
 
 <% end %>
 
-### Putting It Together
+### Собираем все вместе
 
-Since our animation will affect our DOM element's CSS attributes and classes, we'll add a dynamic `{{attributes}}` helper to the `postItem` template:
+Так как наша анимация будет влиять на CSS атрибуты и классы нашего DOM элемента, мы добавим динамический хелпер `{{attributes}}` нашему шаблону `postItem`:
 
 ```html
 <template name="postItem">
@@ -229,9 +174,9 @@ Since our animation will affect our DOM element's CSS attributes and classes, we
 <%= caption "/client/views/posts/post_item.html" %>
 <%= highlight "2" %>
 
-By using the `{{attributes}}` helper in this fashion, we also unlock a hidden feature of Spacebars: any property of the returned `attributes` object will get mapped to the DOM element's HTML attributes (such as `class`, `style`, and so on).
+Используя хелпер `{{attributes}}` мы также открываем скрытое свойство Spacebars - любое свойство возвращаемого объекта `attributes` будет автоматически соотнесено с HTML атрибутами DOM элемента (такими как `class`, `style`, и так далее).
 
-Let's put everything together by creating the `attributes` helper:
+Давайте соберем все вместе создав хелпер `attributes`:
 
 ~~~js
 var POST_HEIGHT = 80;
@@ -245,18 +190,18 @@ Template.postItem.helpers({
     var post = _.extend({}, Positions.findOne({postId: this._id}), this);
     var newPosition = post._rank * POST_HEIGHT;
     var attributes = {};
-    
+
     if (! _.isUndefined(post.position)) {
-      var offset = post.position - newPosition;      
+      var offset = post.position - newPosition;
       attributes.style = "top: " + offset + "px";
       if (offset === 0)
         attributes.class = "post animate"
     }
-    
+
     Meteor.setTimeout(function() {
       Positions.upsert({postId: post._id}, {$set: {position: newPosition}})
     });
-    
+
     return attributes;
   }
 });
@@ -266,41 +211,41 @@ Template.postItem.helpers({
 <%= caption "/client/views/posts/post_item.js" %>
 <%= highlight "1~2, 8~25" %>
 
-At the very top of our document, we're setting the height of each DOM element, in other words our `.post` divs. This presents the obvious downside that any change to this height (for example, a post title wrapping on two lines) will break our animation logic. But for the sake of keeping things simple, we'll assume that every post will be exactly 80 pixels high for now. 
+В начале нашего документа мы устанавливаем значение `height` - высоты для каждого DOM элемента - то есть, наших `div` элементов с постами. Если что-то повлияет на данное значение `height` - например, длинный текст заголовка поста займет больше одной строки - наша анимация сломается. Но на данный момент, чтобы слегка упростить вещи, мы предположим что каждый пост будет ровно 80 пикселей в высоту.
 
-Next, we're declaring a local collection named `Positions`. Note that passing `null` as an argument lets Meteor know that this is a local (in other words, client-only) collection.
+Дальше, мы объявим локальную коллекцию под названием `Positions`. Обратите внимание как мы передаем `null` в качестве аргумента - это даст Meteor знать что мы создаем именно локальную (только для клиента) коллекцию.
 
-We're now ready to build our `attributes` helper. 
+Все готово для того, чтобы создать наш хелпер `attributes`.
 
 <% note do %>
 
-### Running Schedule
+### Расписание движения
 
-It can often be hard to figure out just when a piece of reactive code will run. So let's take a deeper look at the  `attributes` helper.
+Иногда бывает непросто понять, когда кусочек реактивного кода будет запущен. Давайте подробнее взглянем на хелпер `attributes`.
 
-Like every helper, it will run once when the template is first rendered. Because of its dependency on the `_rank` property, it will also re-run every time a post's ranking changes. And finally, its dependency on the `Positions` collection also means it will re-run whenever the item in question is modified. 
+Как любой хелпер, он будет запущен когда шаблон будет отрисован. Из-за его зависимости к атрибуту `_rank`, он также будет перезапущен каждый раз, когда рейтинг поста изменится. И наконец, его зависимость от коллекции `Positions` означает также, что он будет перезапущен когда данный объект будет отредактирован.
 
-This means that the helper might run two or three times in a row. This might seem wasteful at first, but it's just the way reactivity works. Once you get used to it, it will just become another way of thinking about code. 
+Это значит, что хелпер может быть запущен два или три раза подряд. Такое положение вещей может прозвучать расточительным, но это именно то, как реактивность работает. Как только вы привыкнете к ней, это станет неотъемлемой частью разработки приложения, подходом к написанию кода.
 
 <% end %>
 
-### The Attributes Helper
+### Хелпер Attributes
 
-First, we'll look up our post's position in the `Positions` collection and extend `this` (which in this helper corresponds to the current post) with the result of our query. We then use the `_rank` property to figure out the DOM element's new position relative to the top of the page.
+Для начала мы найдем позицию поста в коллекции `Positions` и расширим `this` (который в данном случае соотносится с текущим постом) разультатом нашего запроса. Мы воспользуемся атрибутом `_rank` чтобы рассчитать новые координаты DOM элемента относительно начала страницы.
 
-We must now manage two separate cases: either the helper is running because the template is being rendered (A), or it's running reactively because a property changed (B). 
+Затем мы должны позаботиться о двух сценариях - либо хелпер запущен потому что шаблон отрисовывается (А), или он запущен реактивно потому что изменено значение атрибута (B).
 
-We only want to animate the element in case B, which is why we make sure that `post.position` is defined (we'll see *how* it's defined shortly).
+Нам нужно анимировать элемент только в случае B, поэтому для начала мы убедимся что свойство `post.position` существует и имеет значение (*как именно* оно было создано мы скоро узнаем).
 
-What's more, case B includes two sub-cases, B1 and B2: either we're *teleporting* our DOM element back to the “starting blocks” (its previous position), or we're *animating* it from its previous position to its new one. 
+Вдобавок ко всему, сценарий В имеет два возможных варианта, В1 и В2 - либо мы *телепортируем* наш элемент DOM назад на стартовую позицию (его предыдущую позицию), либо мы *анимируем* его с предыдущей позиции на новую.
 
-This is where the `offset` variable comes in. Since we're using *relative* positioning, we'll want to figure out where to send the element *relative* to its current position. This means subtracting the new position from the previous one. 
+Тут-то и стоит воспользоваться переменной `offset`. Так как мы используем *относительное* - *relative* позиционирование, нужно рассчитать новые координаты *относительно* текущей позиции. Этого можно достичь вычитанием новой позиции из предыдущей.
 
-To figure out whether we're in case B1 or B2, we can simply look at `offset`: if `offset` is different than 0, it means we're *moving* the element *away* from its origin. On the other hand if `offset` is equal to 0, it means we're *animating* the element *back* to its origin coordinate, and we can add the class `animate` to the element to make sure it transitions slowly. 
+Чтобы отличить случай В1 от В2, мы просто на значение свойства `offset`: если `offset` отличается от 0, это означает что мы *отодвигаем* элемент от его первоначального положения, и мы можем добавить класс `animate` к этому элементу чтобы его перемещение было анимировано с помощью волшебства CSS transition.
 
 ### Timing Out
 
-These three situations (A, B1, and B2) are all triggered reactively when certain properties change. In this case, the `setTimeout` function triggers the reevaluation of the reactive context by modifying the `Positions` collection. 
+These three situations (A, B1, and B2) are all triggered reactively when certain properties change. In this case, the `setTimeout` function triggers the reevaluation of the reactive context by modifying the `Positions` collection.
 
 So when a user first loads the page, the whole reactivity flow goes something like this:
 
@@ -325,7 +270,7 @@ Now open your site and start upvoting. You should now see posts gently moving up
 
 ### Animating New Posts
 
-Our posts are now reordering properly, but we don't really have a "new post" animation yet. Instead of having new posts simply pop up at the top of our list, let's fade them in. 
+Our posts are now reordering properly, but we don't really have a "new post" animation yet. Instead of having new posts simply pop up at the top of our list, let's fade them in.
 
 ~~~js
 //..
@@ -334,20 +279,20 @@ attributes: function() {
   var post = _.extend({}, Positions.findOne({postId: this._id}), this);
   var newPosition = post._rank * POST_HEIGHT;
   var attributes = {};
-  
+
   if (_.isUndefined(post.position)) {
     attributes.class = 'post invisible';
   } else {
-    var delta = post.position - newPosition;      
+    var delta = post.position - newPosition;
     attributes.style = "top: " + delta + "px";
     if (delta === 0)
       attributes.class = "post animate"
   }
-  
+
   Meteor.setTimeout(function() {
     Positions.upsert({postId: post._id}, {$set: {position: newPosition}})
   });
-  
+
   return attributes;
 }
 
@@ -356,7 +301,7 @@ attributes: function() {
 <%= caption "/client/views/posts/post_item.js" %>
 <%= highlight "8~10" %>
 
-What we're doing here is isolating case **(A)** and adding the `invisible` CSS class to the element. When the helper next re-runs reactively and the element gets the `animate` class instead, the difference in opacity will be animated and fade the element in. 
+What we're doing here is isolating case **(A)** and adding the `invisible` CSS class to the element. When the helper next re-runs reactively and the element gets the `animate` class instead, the difference in opacity will be animated and fade the element in.
 
 <%= commit "14-2", "Fade items in when they are drawn." %>
 
@@ -364,9 +309,9 @@ What we're doing here is isolating case **(A)** and adding the `invisible` CSS c
 
 ### CSS & JavaScript
 
-You might have noticed that we're using an `.invisible` CSS class to trigger the animation instead of animating the CSS `opacity` property directly like we did for `top`. This is because for `top`, we needed to animate the property to a specific value that depended on the instance data. 
+You might have noticed that we're using an `.invisible` CSS class to trigger the animation instead of animating the CSS `opacity` property directly like we did for `top`. This is because for `top`, we needed to animate the property to a specific value that depended on the instance data.
 
-On the other hand, here we only want to show and hide an element independently of its data. Since it's a good idea to keep your CSS out of your JavaScript as much as possible, we'll only add and remove the class here, and specify the details of the animation over in our stylesheet. 
+On the other hand, here we only want to show and hide an element independently of its data. Since it's a good idea to keep your CSS out of your JavaScript as much as possible, we'll only add and remove the class here, and specify the details of the animation over in our stylesheet.
 
 <% end %>
 
