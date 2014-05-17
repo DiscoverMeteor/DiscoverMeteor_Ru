@@ -241,36 +241,36 @@ Template.postItem.helpers({
 
 Тут-то и стоит воспользоваться переменной `offset`. Так как мы используем *относительное* - *relative* позиционирование, нужно рассчитать новые координаты *относительно* текущей позиции. Этого можно достичь вычитанием новой позиции из предыдущей.
 
-Чтобы отличить случай В1 от В2, мы просто на значение свойства `offset`: если `offset` отличается от 0, это означает что мы *отодвигаем* элемент от его первоначального положения, и мы можем добавить класс `animate` к этому элементу чтобы его перемещение было анимировано с помощью волшебства CSS transition.
+Чтобы отличить случай В1 от В2, мы просто проверим на значение свойства `offset`: если `offset` отличается от 0, это означает что мы *отодвигаем* элемент от его первоначального положения, и мы можем добавить класс `animate` к этому элементу чтобы его перемещение было анимировано с помощью волшебства CSS transition.
 
-### Timing Out
+### Работа с функцией setTimeout
 
-These three situations (A, B1, and B2) are all triggered reactively when certain properties change. In this case, the `setTimeout` function triggers the reevaluation of the reactive context by modifying the `Positions` collection.
+Эти три ситуации (А, В1 и В2) запускаются реактивным способом когда значение определенных атрибутов меняется. В этом случае функция `setTimeout` запускает переопределение реактивного контекста редактируя коллекцию `Positions`.
 
-So when a user first loads the page, the whole reactivity flow goes something like this:
+Поэтому, когда пользователь впервые загружает страницу, весь реактивный процесс происходит следующим образом:
 
-- The `attributes` helper runs for the first time.
-- `post.position` is not defined **(A)**.
-- `setTimeout` runs, defining `post.position`.
-- The `attributes` helper re-runs reactively.
-- There has been no movement, so `offset` goes from 0 to 0 (no visible animation) **(B2)**.
+- Хелпер `attributes` запускается в первый раз.
+- Значение `post.position` не определено **(A)**.
+- `setTimeout` запускается и определяет значение `post.position`.
+- Хелпер `attributes` реактивно перезапускается.
+- Перемещения поста не произошло, поэтому значение параметра `offset` меняется с 0 на 0 (анимация не происходит) **(В2)**.
 
-And here's what happens when an upvote is detected:
+А вот что происходит когда пользователь добавляет голос посту:
 
-- `_rank` is modified, triggering a reevaluation of the `attributes` helper.
-- `post.position` is defined **(B)**.
-- `offset` is not equal to 0, so there is no animation **(B1)**
-- `setTimeout` runs, redefining `post.position`.
-- The `attributes` helper re-runs reactively.
-- `offset` goes back to 0 (with animation) **(B2)**.
+- Значение `_rank` меняется, что запускает переопределение хелпера `attributes`.
+- Значение `post.position` определено **(B)**.
+- Значение `offset` не равно 0, значит анимации нет **(B1)**.
+- Запускается `setTimeout`, который переопределяет значение `post.position`.
+- Хелпер `attributes` реактивно перезапускается.
+- Значение `offset` меняется назад на 0 (с анимацией) **(B2)**.
 
-Now open your site and start upvoting. You should now see posts gently moving up and down with ballet-like grace!
+Откройте сайт и попробуйте проголосовать за посты. Вы должны увидеть как посты с плавной грацией перемещаются вверх и вниз.
 
-<%= commit "14-1", "Added post reordering animation." %>
+<%= commit "14-1", "Добавили анимацию к реорганизации списка постов." %>
 
-### Animating New Posts
+### Анимация новых постов
 
-Our posts are now reordering properly, but we don't really have a "new post" animation yet. Instead of having new posts simply pop up at the top of our list, let's fade them in.
+Наши посты правильно реорганизуются, но у нас все еще нет анимации для новых постов. Вместо того чтобы скучно добавлять посты наверх списка, давайте добавим к этому эффект плавного появления.
 
 ~~~js
 //..
@@ -301,18 +301,18 @@ attributes: function() {
 <%= caption "/client/views/posts/post_item.js" %>
 <%= highlight "8~10" %>
 
-What we're doing here is isolating case **(A)** and adding the `invisible` CSS class to the element. When the helper next re-runs reactively and the element gets the `animate` class instead, the difference in opacity will be animated and fade the element in.
+Мы изолируем сценарий **(А)** и добавляем CSS класс `invisible` нашему элементу. Когда хелпер реактивно перезапускается и элемент получает класс `animate`, разница в значениях прозрачности (opacity) будет проанимирована, и элемент плавно проявится на странице.
 
-<%= commit "14-2", "Fade items in when they are drawn." %>
+<%= commit "14-2", "Плавное проявление постов." %>
 
 <% note do %>
 
 ### CSS & JavaScript
 
-You might have noticed that we're using an `.invisible` CSS class to trigger the animation instead of animating the CSS `opacity` property directly like we did for `top`. This is because for `top`, we needed to animate the property to a specific value that depended on the instance data.
+Вы наверное обратили внимание что мы используем CSS класс `.invisible` для запуска анимации, вместо того чтобы анимировать CSS параметр `opacity` напрямую, как мы это делали с параметром `top`. Это все потому, что нам нужно было анимировать значение `top` до определенного значение, которое зависело от данных конкретного поста.
 
-On the other hand, here we only want to show and hide an element independently of its data. Since it's a good idea to keep your CSS out of your JavaScript as much as possible, we'll only add and remove the class here, and specify the details of the animation over in our stylesheet.
+С другой стороны в данном случае мы только хотим показать или спрятать элемент вне зависимости от его содержимого. Хорошей практикой обычно является держать стили CSS и логику JavaScript отдельно друг от друга, поэтому здесь мы будем только добавлять и удалять класс у элемента, а саму анимацию определим в стилях CSS.
 
 <% end %>
 
-We should finally have the animation behavior we wanted. Load up your app and give it a try! And you can also play around with the `.post.animated` classes to see if you can come up with other transitions. Hint: [CSS easing functions](http://matthewlein.com/ceaser/) are a good place to start!
+Наша анимация должна работать так, как и задумывалась с самого начала. Загрузите приложение и попробуйте! Также вы можете поиграть с классами `.post.animated` и попробовать разные эффекты перехода - transitions. Подсказка: [CSS функции с разнообразными кривыми анимации](http://matthewlein.com/ceaser/) отличное место для старта!
