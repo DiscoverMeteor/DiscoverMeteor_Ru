@@ -157,6 +157,8 @@ Router.configure({
 Router.map(function() {
   this.route('postsList', {path: '/'});
 });
+
+Router.onBeforeAction('loading');
 ~~~
 <%= caption "lib/router.js" %>
 <%= highlight "3,4, 11" %>
@@ -170,8 +172,6 @@ Router.map(function() {
 А так как мы сейчас позволили маршрутизатору обрабатывать нашу подписку, вы теперь можете безопасно удалить её из `main.js` (который теперь будет пустым).
 
 Это как правило хорошая идея ожидать ваши подписки, не просто только для взаимодействия с пользователем, но и также потому что это означает что вы можете с уверенностью предположить что данные всегда будут доступны в шаблоне. Это устраняет необходимость иметь дело с шаблонами начинающими отрисовку перед тем, как их базовые данные будут доступны.
-
-We'll also add an `onBeforeAction` filter to trigger Iron Router's built-in `loading` hook and make sure we're showing the loading template while we wait.
 
 Также мы добавим фильтр `onBeforeAction`, чтобы запустить встроенный `loading` триггер Iron Router'а и показать шаблон загрузки пока мы ждем.
 
