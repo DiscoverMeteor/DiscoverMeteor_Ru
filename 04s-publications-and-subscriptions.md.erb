@@ -30,7 +30,7 @@ paragraphs: 52
 
 Теперь давайте посмотрим, что же такое особенное делает Meteor, по сравнению с предыдущим подходом. Как мы уже поняли, ключевая инновация Meteor состоит в том, что, в то время, как приложение Ruby on Rails живет только на сервере, он имеет еще и клиентскую часть, которая исполняется в браузере.
 
-<%= diagram "client-server", "Pushing a subset of the database to the client.", "pull-right" %>
+<%= diagram "client-server", "Отправляем подмножество данных клиенту.", "pull-right" %>
 
 Это как если бы в нашем предыдущем примере, продавец не просто бы нашел вам нужную книгу, но также пришел бы к вам домой, чтобы почитать ее вам на ночь (признаем, звучит жутковато).
 
@@ -46,13 +46,13 @@ paragraphs: 52
 
 Давайте вернемся к Microscope. Вот все наши посты, которые есть в БД:
 
-<%= diagram "collections-1", "All the posts contained in our database.", "pull-center" %>
+<%= diagram "collections-1", "Все посты в нашей базе данных.", "pull-center" %>
 
 Хотя этот функционал мы еще не реализовали, давайте все же представим, что некоторые посты были отмечены как оскорбительные. Хотя мы и не будем их удалять из самой БД, они все же не должны показываться пользователям (те не нужно отправлять их на клиент).
 
 Первое, что мы должны сделать - это сообщить Meteor, какие данные мы хотим отправить на клиент. В данном случае - что мы хотим отправить только те посты, что не отмечены как оскорбительные.
 
-<%= diagram "collections-2", "Excluding flagged posts.", "pull-center" %>
+<%= diagram "collections-2", "Исключаем помеченные посты.", "pull-center" %>
 
 Вот серверный код, который отвечает за это:
 
@@ -83,7 +83,7 @@ Meteor.publish('posts', function() {
 
 К примеру, давайте предположим, что мы просматриваем профиль некоего Bob Smith, и хотим, чтобы отображались только его посты.
 
-<%= diagram "collections-3", "Subscribing to Bob's posts will mirror them on the client.", "pull-center" %>
+<%= diagram "collections-3", "Подписываясь на посты Bob'а мы реплицируем их на клиенте.", "pull-center" %>
 
 Сперва, мы немного изменим нашу публикацию так, чтобы она принимала параметр:
 
@@ -107,7 +107,7 @@ Meteor.subscribe('posts', 'bob-smith');
 
 Теперь посты Bob’а, которые мы получили, распределены по всем категориям (например: «JavaScript», «Ruby» и «Python»). Может мы и хотим загрузить все его посты в память браузера, прямо сейчас мы хотим отображать только те, что принадлежат категории «JavaScript». Как раз вот здесь и нужна выборка:
 
-<%= diagram "collections-4", "Selecting a subset of documents on the client.", "pull-center" %>
+<%= diagram "collections-4", "Выделяем подмножество документов на клиенте", "pull-center" %>
 
 Также как и на сервере, мы будем использовать для этого метод `Posts.find()`.
 
@@ -146,7 +146,7 @@ Meteor.publish('allPosts', function(){
 });
 ~~~
 
-<%= diagram "fullcollection", "Publishing a full collection", "pull-center" %>
+<%= diagram "fullcollection", "Публикация полной коллекции", "pull-center" %>
 
 Да, все еще публикуем коллекции целиком, но по крайней мере мы можем контролировать, какие коллекции мы публикуем, а какие нет. В данном случае, мы публикуем коллекцию `Posts`, но не публикуем `Comments`.
 
@@ -160,7 +160,7 @@ Meteor.publish('somePosts', function(){
 });
 ~~~
 
-<%= diagram "partialcollection", "Publishing a partial collection", "pull-center" %>
+<%= diagram "partialcollection", "Частичная публикация коллекции", "pull-center" %>
 
 <% note do %>
 
@@ -196,7 +196,7 @@ Meteor.publish('allPosts', function(){
 });
 ~~~
 
-<%= diagram "partialproperties", "Publishing partial properties", "pull-center" %>
+<%= diagram "partialproperties", "Частичная публикация свойств (полей)", "pull-center" %>
 
 Конечно, мы можем совмещать обе техники. Например, если мы хотим получить все посты от Tom’а, но при этом оставляя в стороне даты, мы напишем:
 
