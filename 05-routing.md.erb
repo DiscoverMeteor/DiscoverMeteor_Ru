@@ -75,14 +75,14 @@ Iron Router позволяет нам убежать от этой замшел�
 ~~~html
 <template name="layout">
   <div class="container">
-  <header class="navbar">
-    <div class="navbar-inner">
-      <a class="brand" href="/">Microscope</a>
+    <header class="navbar">
+      <div class="navbar-inner">
+        <a class="brand" href="/">Microscope</a>
+      </div>
+    </header>
+    <div id="main" class="row-fluid">
+      {{> yield}}
     </div>
-  </header>
-  <div id="main" class="row-fluid">
-    {{> yield}}
-  </div>
   </div>
 </template>
 ~~~
@@ -222,7 +222,7 @@ Router.onBeforeAction('loading');
 ~~~js
 Router.map(function() {
   this.route('postsList', {path: '/'});
-  
+
   this.route('postPage', {
     path: '/posts/:_id'
   });
@@ -247,7 +247,7 @@ Router.map(function() {
 ~~~js
 Router.map(function() {
   this.route('postsList', {path: '/'});
-  
+
   this.route('postPage', {
     path: '/posts/:_id',
     data: function() { return Posts.findOne(this.params._id); }
