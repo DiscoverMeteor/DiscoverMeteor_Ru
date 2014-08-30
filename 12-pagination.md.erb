@@ -384,7 +384,56 @@ mrt add iron-router-progress
 
 Благодаря волшебству умных пакетов `smart packages`, индикатор прогресса тут же заработает в нашем приложении. Он будет активирован для каждого маршрута, и автоматически спрятан как только все данные для маршрута будут загружены.
 
-Сделаем небольшую микро-поправку. Отключим `iron-router-progress` для маршрута `postSubmit`, так как ему не нужно ждать никаких данных (в конце-концов это просто пустая форма на странице).
+Из-за того что мы хотим показать список постов даже если мы переходим между страницами, мы не хотим, чтобы триггер загрузка запускался для наших страниц `PostListController` -- мы можем это добиться если не будем ждать подписок:
+
+~~~js
+PostsListController = RouteController.extend({
+  // ...
+
+  onBeforeAction: function() {
+    this.postsSub = Meteor.subscribe('posts', this.findOptions());
+  },
+  posts: function() {
+    return Posts.find({}, this.findOptions());
+  },
+  data: function() {
+    var hasMore = this.posts().count() === this.limit();
+    return {
+      posts: this.posts(),
+      ready: this.postsSub.ready,
+      nextPath: hasMore ? this.nextPath() : null
+    };
+  }
+});
+~~~
+<%= caption "lib/router.js" %>
+<%= highlight "3~5,13" %>
+
+Вместо подписки в `waitOn` блоке, мы подписываемся в `onBeforeAction`, держа ссылку на подписку (subscription handle) в `this.postsSub`, таким образом мы сообщаем о "готовности" шаблону.
+
+Затем, в шаблоне, мы можем показать бегунок загрузки в конце списка постов, когда мы подгружаем новый набор постов. Для этого мы проверяем состояние "готовности", которые мы передали ранее:
+
+~~~html
+<template name="postsList">
+  <div class="posts">
+    {{#each postsWithRank}}
+      {{> postItem}}
+    {{/each}}
+
+    {{#if nextPath}}
+      <a class="load-more" href="{{nextPath}}">Load more</a>
+    {{else}}
+      {{#unless ready}}
+        LOADING
+      {{/unless}}
+    {{/if}}
+  </div>
+</template>
+~~~
+<%= caption "client/views/posts/posts_list.html" %>
+<%= highlight "10~12" %>
+
+Сделаем еще одну небольшую микро-поправку. Отключим `iron-router-progress` для маршрута `postSubmit`, так как ему не нужно ждать никаких данных (в конце-концов это просто пустая форма на станице):
 
 ~~~js
 Router.map(function() {
@@ -460,18 +509,5 @@ Router.map(function() {
 <%= highlight "7~12,18~20" %>
 
 <%= commit "12-6","Подписываемся на посты по-отдельности, чтобы можно было загружать индивидуальные страницы с постами." %>
-
-<% note do %>
-
-### Неудачный User Experience?
-
-Как вы могли заметить, экран прыгает вершину списка, когда пользователь нажимает на кнопку "загрузить еще".
-Это не самый лучшие пользовательские ожидание (User Experience)!
-Это [баг](https://github.com/DiscoverMeteor/Microscope/issues/106) из-за проблемы пакета Iron Router Progress и Iron Router 0.7.1.
-
-Если вы хотите увидеть как это работает лучше, попробуйте Iron Router версии 0.7.0.
-
-<% end %>
-
 
 Теперь, когда у нас работает разбиение гигантского количества постов на страницы, у приложения не будет проблем с обилием данных, и пользователи смогут запостить еще больше ссылок. Было бы здорово как-то сортировать все эти ссылки и дать пользователям возможность голосовать за лучшие из них. Об этом и будет следующая глава.
