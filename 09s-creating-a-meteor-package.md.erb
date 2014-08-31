@@ -14,7 +14,7 @@ paragraphs: 22
 
 Мы будем использовать имя `tmeasday` для примеров, вы можете заменить его на свое.
 
-Во-первых нам нужно создать структуру пакета где он будет находиться. Для этого мы можем использовать команду `meteor create --package tmeasday:errors`. Заметьте, что Meteor создал папку `packages/tmeasday:errors` с файлами внутри. Мы начнем редактировать файл `package.js`, этот файл уведомляет Meteor о том, как пакет должен быть использован и символы, которые он экспортирует.
+Во-первых нам нужно создать структуру пакета где он будет находиться. Для этого мы можем использовать команду `meteor create --package tmeasday:errors`. Заметьте, что Meteor создал папку `packages/tmeasday:errors` с файлами внутри. Мы начнем редактировать файл `package.js`, этот файл уведомляет Meteor о том, как пакет должен быть использован и какие объекты и функции он экспортирует.
 
 ~~~js
 Package.describe({
@@ -35,7 +35,7 @@ api.versionsFrom('METEOR@0.9.0');
 ~~~
 <%= caption "packages/tmeasday:errors/package.js" %>
 
-Разробатывая пакет для реального использования, будет неплохо добавить поле `git` в `Package.describe` (если вы публикуете свои пакеты на git сервере). Таким образом пользователи могут изучать исходный код, и если вы используете GitHub, README файл репозитория будет использован в описании на Atmosphere.
+Разробатывая пакет для реального использования, будет неплохо добавить Git URL репозитория вашего пакета поле `git` в `Package.describe` (если вы публикуете свои пакеты на git сервере). Таким образом пользователи могут изучать исходный код, и если вы используете GitHub, README файл репозитория будет использован в описании на Atmosphere.
 
 Добавим еще три файла в наш пакет (сгенерированный Meteor'ом код можно убрать). Мы можем скопировать их из кода Microscope практически без изменений, за исключением правильного названия переменных и слегка почищенного API:
 
@@ -178,7 +178,7 @@ Tinytest.addAsync("Errors template works", function(test, done) {
 
 ~~~js
 Package.onTest(function(api) {
-  api.use('errors', 'client');
+  api.use('tmeasday:errors', 'client');
   api.use(['tinytest', 'test-helpers'], 'client');
 
   api.add_files('errors_tests.js', 'client');
@@ -191,7 +191,7 @@ Package.onTest(function(api) {
 Теперь мы можем запустить серию тестов следующей командой:
 
 ~~~bash
-$ meteor test-packages errors
+$ meteor test-packages tmeasday:errors
 ~~~
 <%= caption "Terminal" %>
 
