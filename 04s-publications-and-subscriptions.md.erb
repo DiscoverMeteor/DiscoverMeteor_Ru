@@ -59,7 +59,7 @@ paragraphs: 52
 ~~~js
 // on the server
 Meteor.publish('posts', function() {
-  return Posts.find({flagged: false}); 
+  return Posts.find({flagged: false});
 });
 ~~~
 
@@ -140,7 +140,7 @@ Template.posts.helpers({
 
 Как только вы уберете пакет `autopublish`, вы увидете, что все данные исчезли с клиента. Самый простой способ вернуть их - это просто воспроизвести то же, что делает `autopublish` - опубликовать коллекцию целиком. Например:
 
-~~~js 
+~~~js
 Meteor.publish('allPosts', function(){
   return Posts.find();
 });
@@ -154,7 +154,7 @@ Meteor.publish('allPosts', function(){
 
 Следующий уровень контроля - публикация только части коллекции. К примеру, только постов, принадлежащих конкретному автору:
 
-~~~js 
+~~~js
 Meteor.publish('somePosts', function(){
   return Posts.find({'author':'Tom'});
 });
