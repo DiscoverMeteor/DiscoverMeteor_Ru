@@ -9,11 +9,13 @@ paragraphs: 29
 
 Теперь, когда мы можем создавать посты, следующим шагом будет их редактирование и удаление. Хотя UI код для этого довольно прост, сейчас самое время будет поговорить о том, как Meteor работает с правами доступа.
 
-Давайте взглянем на роутер. Мы добавим путь для страницы редактирования поста и зададим контекст `this` через параметр `data`:
+Давайте взглянем на роутер. Мы добавим путь для страницы редактирования поста и зададим контекст:
 
 ~~~js
 Router.configure({
-  layoutTemplate: 'layout'
+  layoutTemplate: 'layout',
+  loadingTemplate: 'loading',
+  waitOn: function() { return Meteor.subscribe('posts'); }
 });
 
 Router.map(function() {
@@ -34,25 +36,25 @@ Router.map(function() {
   });
 });
 
-var requireLogin = function() {
+var requireLogin = function(pause) {
   if (! Meteor.user()) {
     if (Meteor.loggingIn())
       this.render('loading')
     else
       this.render('accessDenied');
 
-    this.stop();
+    pause();
   }
 }
 
-Router.before(requireLogin, {only: 'postSubmit'});
+Router.onBeforeAction(requireLogin, {only: 'postSubmit'});
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "12~15" %>
+<%= highlight "14~17" %>
 
 ### Шаблон страницы редактирования поста
 
-Рассмотрим шаблон страницы. Наш `postEdit` шаблон будет довольно стандартной формой:
+Теперь можем сосредоточится на шаблоне. Наш `postEdit` шаблон приобретёт стандартный вид:
 
 ~~~html
 <template name="postEdit">
