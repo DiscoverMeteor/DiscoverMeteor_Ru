@@ -202,33 +202,37 @@ Posts.allow({
 
 ~~~js
 Router.configure({
-  layoutTemplate: 'layout'
+  layoutTemplate: 'layout',
+  loadingTemplate: 'loading',
+  waitOn: function() { return Meteor.subscribe('posts'); }
 });
 
 Router.map(function() {
   this.route('postsList', {path: '/'});
-
+  
   this.route('postPage', {
     path: '/posts/:_id',
     data: function() { return Posts.findOne(this.params._id); }
   });
-
+  
   this.route('postSubmit', {
     path: '/submit'
   });
 });
 
-var requireLogin = function() {
+
+var requireLogin = function(pause) {
   if (! Meteor.user()) {
     this.render('accessDenied');
-    this.stop();
+    pause();
   }
 }
 
-Router.before(requireLogin, {only: 'postSubmit'});
+Router.onBeforeAction('loading');
+Router.onBeforeAction(requireLogin, {only: 'postSubmit'});
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "18~25" %>
+<%= highlight "19~26,29" %>
 
 Теперь создадим шаблон для страницы "Доступ запрещен":
 
@@ -258,29 +262,31 @@ Router.before(requireLogin, {only: 'postSubmit'});
 ~~~js
 Router.map(function() {
   this.route('postsList', {path: '/'});
-
+  
   this.route('postPage', {
     path: '/posts/:_id',
     data: function() { return Posts.findOne(this.params._id); }
   });
-
+  
   this.route('postSubmit', {
     path: '/submit'
   });
 });
 
-var requireLogin = function() {
+
+var requireLogin = function(pause) {
   if (! Meteor.user()) {
     if (Meteor.loggingIn())
       this.render(this.loadingTemplate);
     else
       this.render('accessDenied');
-
-    this.stop();
+    
+    pause();
   }
 }
 
-Router.before(requireLogin, {only: 'postSubmit'});
+Router.onBeforeAction('loading');
+Router.onBeforeAction(requireLogin, {only: 'postSubmit'});
 ~~~
 <%= caption "lib/router.js" %>
 <%= highlight "16~19" %>
@@ -298,9 +304,9 @@ Router.before(requireLogin, {only: 'postSubmit'});
 ~~~
 <%= caption "client/views/includes/header.html" %>
 
-<%= commit "7-5", "Показывать линк для нового поста только когда пользователь залогинен" %>
+<%= commit "7-5", "Показывать ссылку на создание поста только когда пользователь залогинен" %>
 
-Хелпер `currentUser` создан для нас пакетом `accounts` и является в шаблонах handlebars тем же самым, что и вызов `Meteor.user()`. Так как он реактивен, линк будет появляться и исчезать на странице когда статус логин пользователя будет меняться.
+Хелпер `currentUser` доступен для нас через пакет `accounts` и является в шаблонах handlebars тем же самым, что и вызов `Meteor.user()`. Так как он реактивен, линк будет появляться и исчезать на странице когда статус логин пользователя будет меняться.
 
 ###Метод Meteor: абстракция и безопасность на новом уровне
 
