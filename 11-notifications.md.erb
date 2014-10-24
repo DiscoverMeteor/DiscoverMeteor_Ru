@@ -17,13 +17,22 @@ paragraphs: 25
 
 Мы будем создавать уведомление каждый раз, когда кто-то оставляет комментарий к вашему посту. В будущем уведомления могут быть также использованы и при многих других сценариях, но сейчас этого будет достаточно, чтобы держать пользователя в курсе происходящего.
 
-Создадим коллекцию `Notifications`, а также функцию `createCommentNotification`, которая будет добавлять соответствующее уведомление для каждого нового комментария к вашим постам:
+Создадим коллекцию `Notifications`, а также функцию `createCommentNotification`, которая будет добавлять соответствующее уведомление для каждого нового комментария к вашим постам.
+
+Так как мы будем обновлять уведомления с клиентской стороны, нужно удостовериться в надежности вызова 'allow'. Мы проверим это следующим образом:
+
+- Пользователь, вызывающий `update`, является владельцем обновляемого уведомления.
+- Пользователь пытается обновить только одно поле.
+- Этим единственным полем является свойство `read`.
 
 ~~~js
-Notifications = new Meteor.Collection('notifications');
+Notifications = new Mongo.Collection('notifications');
 
 Notifications.allow({
-  update: ownsDocument
+  update: function(userId, doc, fieldNames) {
+    return ownsDocument(userId, doc) &&
+      fieldNames.length === 1 && fieldNames[0] === 'read';
+  }
 });
 
 createCommentNotification = function(comment) {
@@ -39,7 +48,7 @@ createCommentNotification = function(comment) {
   }
 };
 ~~~
-<%= caption "collections/notifications.js" %>
+<%= caption "lib/collections/notifications.js" %>
 
 Подобно постам и комментариям, коллекция `Notifications` будет доступна и на клиенте, и на сервере. Так как нам нужна будет возможность обновлять уведомления после того, как пользователь их увидит, мы разрешаем выполнение операции `update`, убедившись, как обычно, что пользователь может редактировать только свои собственные данные.
 
@@ -48,48 +57,68 @@ createCommentNotification = function(comment) {
 У нас уже есть серверный метод для создания комментариев, поэтому остается всего лишь добавить в него вызов нашей функции. Мы заменяем `return Comments.insert(comment);` на `comment._id = Comments.insert(comment)`, чтобы сохранить `_id` нового комментария в переменной, а затем вызваем функцию `createCommentNotification`:
 
 ~~~js
-Comments = new Meteor.Collection('comments');
+Comments = new Mongo.Collection('comments');
 
 Meteor.methods({
   comment: function(commentAttributes) {
 
-    // [...]
+    //...
 
-    // create the comment, save the id
+    comment = _.extend(commentAttributes, {
+      userId: user._id,
+      author: user.username,
+      submitted: new Date()
+    });
+
+    // обновляем количество комментариев для поста
+    Posts.update(comment.postId, {$inc: {commentsCount: 1}});
+
+    // создаем комментарий и сохраняем id
     comment._id = Comments.insert(comment);
     
-    // now create a notification, informing the user that there's been a comment
+    // создаем уведомление, информируя пользователя о новом комментарии
     createCommentNotification(comment);
     
     return comment._id;
   }
 });
 ~~~
-<%= caption "collections/comments.js" %>
-<%= highlight "8~14" %>
+<%= caption "lib/collections/comments.js" %>
+<%= highlight "17~123" %>
 
-Затем публикуем уведомления и подписываемся на них на клиенте:
+Затем публикуем уведомления:
 
 ~~~js
-// [...]
+Meteor.publish('posts', function() {
+  return Posts.find();
+});
+
+Meteor.publish('comments', function(postId) {
+  check(postId, String);
+  return Comments.find({postId: postId});
+});
 
 Meteor.publish('notifications', function() {
   return Notifications.find();
 });
 ~~~
 <%= caption "server/publications.js" %>
+<%= highlight "10~12" %>
+
+И подписываемся на клиенте:
 
 ~~~js
 Router.configure({
   layoutTemplate: 'layout',
   loadingTemplate: 'loading',
-  waitOn: function() { 
+  notFoundTemplate: 'notFound',
+  waitOn: function() {
     return [Meteor.subscribe('posts'), Meteor.subscribe('notifications')]
   }
 });
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "5" %>
+<%= highlight "6" %>
 
 <%= commit "11-1", "Added basic notifications collection." %>
 
@@ -99,16 +128,19 @@ Router.configure({
 
 ~~~html
 <template name="header">
-  <header class="navbar">
-    <div class="navbar-inner">
-      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </a>
-      <a class="brand" href="{{pathFor 'postsList'}}">Microscope</a>
-      <div class="nav-collapse collapse">
-        <ul class="nav">
+  <nav class="navbar navbar-default" role="navigation">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navigation">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="{{pathFor 'postsList'}}">Microscope</a>
+      </div>
+      <div class="collapse navbar-collapse" id="navigation">
+        <ul class="nav navbar-nav">
           {{#if currentUser}}
             <li>
               <a href="{{pathFor 'postSubmit'}}">Submit Post</a>
@@ -118,18 +150,18 @@ Router.configure({
             </li>
           {{/if}}
         </ul>
-        <ul class="nav pull-right">
-          <li>{{loginButtons}}</li>
+        <ul class="nav navbar-nav navbar-right">
+          {{> loginButtons}}
         </ul>
       </div>
     </div>
-  </header>
+  </nav>
 </template>
 ~~~
-<%= caption "client/views/includes/header.html" %>
-<%= highlight "12~19" %>
+<%= caption "client/templates/includes/header.html" %>
+<%= highlight "15~22" %>
 
-Создадим шаблоны `notifications` и `notification` (они будут делить между собой файл `notifications.html`):
+Создадим шаблоны `notifications` и `notificationItem` (они будут делить между собой файл `notifications.html`):
 
 ~~~html
 <template name="notifications">
@@ -143,7 +175,7 @@ Router.configure({
   <ul class="notification dropdown-menu">
     {{#if notificationCount}}
       {{#each notifications}}
-        {{> notification}}
+        {{> notificationItem}}
       {{/each}}
     {{else}}
       <li><span>No Notifications</span></li>
@@ -151,7 +183,7 @@ Router.configure({
   </ul>
 </template>
 
-<template name="notification">
+<template name="notificationItem">
   <li>
     <a href="{{notificationPostPath}}">
       <strong>{{commenterName}}</strong> commented on your post
@@ -159,11 +191,11 @@ Router.configure({
   </li>
 </template>
 ~~~
-<%= caption "client/views/notifications/notifications.html" %>
+<%= caption "client/templates/notifications/notifications.html" %>
 
 Как мы видим, план состоит в том, чтобы каждое уведомление содержало ссылку на пост с соответствующим комментарием и имя пользователя, который оставил этот комментарий.
 
-Далее нам нужно убедиться, что мы выбираем правильный список уведомлений в менеджере шаблона, а также помечаем уведомления как "read" ("прочитанные"), когда пользователь проходит по указанной в них ссылке.
+Далее нам нужно убедиться, что мы выбираем правильный список уведомлений в хелпере, а также помечаем уведомления как "read" ("прочитанные"), когда пользователь проходит по указанной в них ссылке.
 
 ~~~js
 Template.notifications.helpers({
@@ -179,15 +211,15 @@ Template.notification.helpers({
   notificationPostPath: function() {
     return Router.routes.postPage.path({_id: this.postId});
   }
-})
+});
 
 Template.notification.events({
   'click a': function() {
     Notifications.update(this._id, {$set: {read: true}});
   }
-})
+});
 ~~~
-<%= caption "client/views/notifications/notifications.js" %>
+<%= caption "client/templates/notifications/notifications.js" %>
 
 <%= commit "11-2", "Display notifications in the header." %>
 
@@ -221,7 +253,7 @@ Template.notification.events({
 
 ~~~js
 Meteor.publish('notifications', function() {
-  return Notifications.find({userId: this.userId});
+  return Notifications.find({userId: this.userId, read: false});
 });
 ~~~
 <%= caption "server/publications.js" %>
