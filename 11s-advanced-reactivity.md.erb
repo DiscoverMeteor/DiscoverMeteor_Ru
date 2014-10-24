@@ -5,7 +5,7 @@ slug: advanced-reactivity
 date: 0011/01/02
 number: 11.5
 sidebar: true
-contents: Научитесь создавать реактивные источники данных в Meteor.| Создадите простой пример реактивного источника данных.| Увидите, в чем сходства и различия между Deps и AngularJS.
+contents: Научитесь создавать реактивные источники данных в Meteor.| Создадите простой пример реактивного источника данных.| Увидите, в чем сходства и различия между Tracker и AngularJS.
 paragraphs: 29
 ---
 
@@ -22,7 +22,7 @@ currentLikeCount = 0;
 Meteor.setInterval(function() {
   var postId;
   if (Meteor.user() && postId = Session.get('currentPostId')) {
-    getFacebookLikeCount(Meteor.user(), Posts.find(postId), 
+    getFacebookLikeCount(Meteor.user(), Posts.find(postId).url,
       function(err, count) {
         if (!err)
           currentLikeCount = count;
@@ -45,7 +45,7 @@ Template.postItem.likeCount = function() {
 
 Реактивность Meteor опосредована *зависимостями (dependencies)* - структурами данных, которые отслеживают набор вычислений.
 
-Как мы уже видели в главе про реактивность, вычисление - это часть кода, которая использует реактивные данные. В нашем случае существует вычисление, которое было создано исключительно для шаблона `postItem`. Каждый хелпер в менеджере этого шаблона выполняется внутри данного вычисления.
+Как мы уже видели в главе про реактивность, вычисление - это часть кода, которая использует реактивные данные. В нашем случае существует вычисление, которое было создано исключительно для шаблона `postItem`, и у каждого хелпера в менеджере этого шаблона тoже есть свое вычисление.
 
 Вы можете воспринимать вычисление как участок кода, который "заботится" о реактивных данных. В случае изменений в данных именно вычисление будет об этом проинформировано (при помощи `invalidate()`), и оно же будет решать, нужно ли предпринимать какие-либо действия.
 
@@ -55,7 +55,7 @@ Template.postItem.likeCount = function() {
 
 ~~~js
 var _currentLikeCount = 0;
-var _currentLikeCountListeners = new Deps.Dependency();
+var _currentLikeCountListeners = new Tracker.Dependency();
 
 currentLikeCount = function() {
   _currentLikeCountListeners.depend();
@@ -81,7 +81,34 @@ Meteor.setInterval(function() {
 
 Затем вычисления могут работать с изменением, рассматривая различные случаи по отдельности.
 
-### Сравниваем Deps и Angular
+Если вам кажется, что это большое количество шаблонного кода для простого реактивного источника данных, то вы правы, и в Meteor есть встроенные инструменты, позволяющие упростить процесс (точно так же как вместо того, чтобы использовать вычисления напрямую, вы обычно просто применяете autorun). Существует базовый пакет `reactive-var`, который делает абсолютно то же самое, что и функция `currentLikeCount()`. Если мы добавим его:
+
+~~~bash
+meteor add reactive-var
+~~~
+
+Мы можем использовать его, чтобы немного упростить код:
+
+~~~js
+var currentLikeCount = new ReactiveVar();
+
+Meteor.setInterval(function() {
+  var postId;
+  if (Meteor.user() && postId = Session.get('currentPostId')) {
+    getFacebookLikeCount(Meteor.user(), Posts.find(postId),
+      function(err, count) {
+        if (!err) {
+          currentLikeCount.set(count);
+        }
+      });
+  }
+}, 5 * 1000);
+~~~
+<%= highlight "1,9" %>
+
+Теперь мы будем вызывать `currentLikeCount.get()` из хелпера, и все будет работать как прежде. Кроме этого существует базовый пакет `reactive-dict`, предоставляющий реактивное хранилище для пар "ключ-значение" (почти как `Session`), который тоже может быть полезным.
+
+### Сравниваем Tracker и Angular
 
 [Angular](http://angularjs.org/) - это работающая только на клиентской стороне библиотека для реактивной отрисовки, разработанная ребятами из Google. Очень пояснительным является сравнение подходов Meteor и Angular к отслеживанию зависимостей, так как их различия существенны.
 
