@@ -8,7 +8,9 @@ In this file we'll be collecting all the common translations of frequently used 
 | packages  | пакеты  |
 | Meteor app  | Meteor приложение  |
 | template helpers | методы шаблона |
-
+| route | маршрут |
+| Note: | Внимание: |
+| callback | callback-функция |
 
 При первой встрече технического термина, такого как "Pagination", хорошо давать
 оригинал на том же месте. Достаточно это сделать первый раз, чтобы читатель,
