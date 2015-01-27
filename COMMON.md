@@ -1,12 +1,12 @@
 In this file we'll be collecting all the common translations of frequently used phrases:
 
 На протяжении всей книги, пожалуйста, используйте "Meteor", а не "MeteorJS" и не
-"метеор" и тп.
+"метеор" и т. п.
 
 | English  | Русский |
 | ------------- | ------------- |
 | packages  | пакеты  |
-| Meteor app  | Meteor приложение  |
+| Meteor app  | Meteor-приложение  |
 | template helpers | методы шаблона |
 | route | маршрут |
 | Note: | Внимание: |
