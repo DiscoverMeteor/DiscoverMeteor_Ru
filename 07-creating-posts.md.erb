@@ -324,7 +324,7 @@ Template.postSubmit.events({
       if (error)
         return alert(error.reason);
       
-      Router.go('postPage', {_id: result._id});  
+      Router.go('postPage', {_id: result._id});
     });
   }
 });
@@ -359,8 +359,8 @@ Meteor.methods({
     
     var user = Meteor.user();
     var post = _.extend(postAttributes, {
-      userId: user._id, 
-      author: user.username, 
+      userId: user._id,
+      author: user.username,
       submitted: new Date()
     });
     
@@ -412,8 +412,8 @@ Meteor.methods({
     
     var user = Meteor.user();
     var post = _.extend(postAttributes, {
-      userId: user._id, 
-      author: user.username, 
+      userId: user._id,
+      author: user.username,
       submitted: new Date()
     });
     
@@ -453,7 +453,7 @@ Template.postSubmit.events({
       if (result.postExists)
         alert('This link has already been posted');
     
-      Router.go('postPage', {_id: result._id});  
+      Router.go('postPage', {_id: result._id});
     });
   }
 });

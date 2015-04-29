@@ -65,7 +65,7 @@ currentLikeCount = function() {
 Meteor.setInterval(function() {
   var postId;
   if (Meteor.user() && postId = Session.get('currentPostId')) {
-    getFacebookLikeCount(Meteor.user(), Posts.find(postId), 
+    getFacebookLikeCount(Meteor.user(), Posts.find(postId),
       function(err, count) {
         if (!err && count !== _currentLikeCount) {
           _currentLikeCount = count;
@@ -138,7 +138,7 @@ $rootScope.$watch('currentLikeCount', function(likeCount) {
 
 ~~~js
 Meteor.setInterval(function() {
-  getFacebookLikeCount(Meteor.user(), Posts.find(postId), 
+  getFacebookLikeCount(Meteor.user(), Posts.find(postId),
     function(err, count) {
       if (!err) {
         $rootScope.currentLikeCount = count;
